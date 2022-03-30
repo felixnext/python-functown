@@ -1,6 +1,6 @@
 # FuncTown
 
-`FuncTown` is a python
+`FuncTown` is a python library to make working with azure functions easier and remove boilerplate.
 
 ## Getting Started
 
