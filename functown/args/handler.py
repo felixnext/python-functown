@@ -48,9 +48,17 @@ class RequestArgHandler():
 
         return arg
 
+    def _parse_body(self, name):
+        arg = None
+        try:
+            body = self.req.get_json()
+            arg = body[name] if name in body else None
+        except Exception:
+            logging.warning("Could not parse request body to json")
+        return arg
+
     def get_body(self, name, required=False, map_fct=None, allowed=None, list_map=None, default=None):
-        body = self.req.get_json()
-        arg = body[name] if name in body else None
+        arg = self._parse_body(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
     def get_query(self, name, required=False, map_fct=None, allowed=None, list_map=None, default=None):
@@ -64,8 +72,7 @@ class RequestArgHandler():
     def get_body_query(self, name, required=False, map_fct=None, allowed=None, list_map=None, default=None):
         arg = self.req.params.get(name)
         if not arg and self.req.get_body():
-            body = self.req.get_json()
-            arg = body[name] if name in body else None
+            arg = self._parse_body(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
     def get_form(self, name: str, required: bool = False, map_fct=None, allowed=None, list_map=None, default=None):
