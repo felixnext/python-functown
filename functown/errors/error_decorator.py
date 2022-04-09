@@ -8,7 +8,7 @@ import logging
 
 from azure.functions import HttpRequest, HttpResponse
 
-from functown.errors import TokenError, HandlerError, ArgError
+from .errors import TokenError, HandlerError, ArgError
 
 
 def handle_errors(debug=False, show_all_errors=False):
