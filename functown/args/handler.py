@@ -8,7 +8,7 @@ import logging
 
 from azure.functions import HttpRequest
 
-from shared.errors import ArgError
+from functown.errors import ArgError
 
 
 class RequestArgHandler():
