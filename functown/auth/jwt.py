@@ -1,10 +1,10 @@
-'''
+"""
 Helper Class to decode JWT Tokens and verify the claims.
 
 Note: This is currently required for python functions as they have no claim principal
 
 Copyright 2022 - Felix Geilert
-'''
+"""
 
 
 import os
@@ -26,17 +26,17 @@ BEARER = "bearer "
 
 def ensure_bytes(key):
     if isinstance(key, str):
-        key = key.encode('utf-8')
+        key = key.encode("utf-8")
     return key
 
 
 def decode_value(val):
-    decoded = base64.urlsafe_b64decode(ensure_bytes(val) + b'==')
-    return int.from_bytes(decoded, 'big')
+    decoded = base64.urlsafe_b64decode(ensure_bytes(val) + b"==")
+    return int.from_bytes(decoded, "big")
 
 
 def decode_token(headers, verify=True):
-    '''Verifies the request headers and returns a list of claims.
+    """Verifies the request headers and returns a list of claims.
 
     Note that this will not verify the token as this should be done by azure.
 
@@ -48,18 +48,18 @@ def decode_token(headers, verify=True):
         oid (str): Unique ID of the user
         scopes (set): Set of access scopes for the user from the token
         local_mode (bool): Defines if function runs in local mode
-    '''
+    """
     # get token
     hdict = dict(headers)
     token = hdict.get("authorization", None)
     if token and len(token) > len(BEARER):
-        token = token[len(BEARER):]
+        token = token[len(BEARER) :]
     else:
         raise TokenError("JWT Token could not be parsed")
 
     # check if in localmode
-    host = hdict.get('host', None)
-    local_mode = host and host.split(':')[0].lower() == 'localhost'
+    host = hdict.get("host", None)
+    local_mode = host and host.split(":")[0].lower() == "localhost"
 
     if verify:
         # retrieve the headers
@@ -79,29 +79,30 @@ def decode_token(headers, verify=True):
 
         # verify that kid matches
         sig = None
-        for key in keys['keys']:
-            if header_data['kid'] == key['kid']:
+        for key in keys["keys"]:
+            if header_data["kid"] == key["kid"]:
                 sig = key
                 break
         if not sig:
             raise TokenError("Token signature does not match")
 
         # retrieve pub key
-        pk = RSAPublicNumbers(
-            n=decode_value(sig['n']),
-            e=decode_value(sig['e'])
-        ).public_key(default_backend()).public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        pk = (
+            RSAPublicNumbers(n=decode_value(sig["n"]), e=decode_value(sig["e"]))
+            .public_key(default_backend())
+            .public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
         )
 
         # retrieve the algo from the header and decode
         claims = jwt.decode(
             token,
             key=pk,
-            algorithms=[header_data['alg']],
+            algorithms=[header_data["alg"]],
             audience=os.getenv("B2C_APP_ID"),
-            issuer=issuer["issuer"]
+            issuer=issuer["issuer"],
         )
     else:
         logging.warning("JWT token is not verified!")
@@ -114,24 +115,30 @@ def decode_token(headers, verify=True):
         user_name = hdict.get("x-ms-client-principal-name", None)
 
         # compare
-        if (user_id and user_id != claims['oid']) or (user_name and user_name != claims['name']):
+        if (user_id and user_id != claims["oid"]) or (
+            user_name and user_name != claims["name"]
+        ):
             raise TokenError("Provided user information does not match")
     else:
         logging.info("Executing local mode (avoid user check)")
 
     # verify if token is expired
-    if claims['exp'] < time():
+    cur_time = time()
+    if claims["exp"] < cur_time:
+        logging.error(
+            f"Current time is {cur_time} but token is expired at {claims['exp']} (diff: {claims['exp'] - cur_time})"
+        )
         raise TokenError("Token is expired")
 
     # further parse the claims
-    scopes = set(claims['scp'].split(' '))
+    scopes = set(claims["scp"].split(" "))
 
     # pass on the data
-    return claims['name'], claims['oid'], scopes, local_mode
+    return claims["name"], claims["oid"], scopes, local_mode
 
 
 def verify_user(req, scopes=None, verify=False):
-    '''Verifies the user send in the request
+    """Verifies the user send in the request
 
     Args:
         req: HttpRequest that should be verified
@@ -143,7 +150,7 @@ def verify_user(req, scopes=None, verify=False):
         user_id: User Id in the token
         scopes: Scopes from the token
         local: If the request was send from localhost
-    '''
+    """
     # verify the token
     try:
         user, user_id, user_scp, local = decode_token(req.headers, verify=verify)
