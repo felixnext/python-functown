@@ -6,6 +6,7 @@ from types import TracebackType
 from typing import List
 import os
 import sys
+import json
 import logging
 
 from azure.functions import HttpRequest, HttpResponse
@@ -29,12 +30,17 @@ def _send_response(
 
     # validate error type to return
     if return_error == True:
+        # update mime type
         mime = "application/json"
         msg = {"user_message": msg}
+
         # add exception and trace to message
         msg["type"] = str(exc_type)
         msg["value"] = str(exc_obj)
         msg["trace"] = names
+
+        # encode for return
+        msg = json.dumps(msg)
 
     # check for logs
     if log_error == True:
