@@ -2,6 +2,7 @@
 Function decorator that should make error handling easier
 """
 
+from types import TracebackType
 from typing import List
 import os
 import sys
@@ -46,7 +47,7 @@ def _send_response(
     return HttpResponse(msg, status_code=code, mimetype=mime)
 
 
-def _get_trace(ex: Exception) -> List[str]:
+def _get_trace(tb: TracebackType) -> List[str]:
     names = []
     while tb:
         file_name = os.path.split(tb.tb_frame.f_code.co_filename)[1]
