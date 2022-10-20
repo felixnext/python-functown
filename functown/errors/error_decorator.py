@@ -107,7 +107,7 @@ def handle_errors(debug=False, log_all_errors=False, return_errors=False):
                     500,
                     msg="This function executed unsuccessfully",
                     return_error=return_errors,
-                    log_errors=debug or log_all_errors,
+                    log_error=debug or log_all_errors,
                 )
 
         return execute
