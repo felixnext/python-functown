@@ -1,0 +1,14 @@
+[
+    {
+      "name": "APP_INSIGHTS_KEY",
+      "value": "<KEY>",
+      "localValue": "<KEY>",
+      "slotSetting": false
+    },
+    {
+      "name": "FUNC_DEBUG",
+      "value": "True",
+      "localValue": "True",
+      "slotSetting": false
+    }
+  ]
