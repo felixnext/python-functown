@@ -48,3 +48,17 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 All this should remove boilerplate from Azure-Functions.
 
 🎷 Welcome to FuncTown! 🎷
+
+## Run Example
+
+The source folder also includes an `example` function that provides a basic azure function,
+that leverages the different functionality of the library.
+
+You can create a new Functions app in your Azure Subscripton to test it. Follow these steps:
+
+1. Create a new Functions App (note that this should at least be Python 3.8 and a consumption tier is recommended)
+2. Publish the content of the example folder to the functions app (through VS Code Plug-In or through CLI)
+3. Create a new Application Insights Instance through your Browser in the same resource group as the Functions App
+4. Take the telemetry key from the App Insights and paste it to your
+
+You can now use `curl` to test various commands against the endpoint:
