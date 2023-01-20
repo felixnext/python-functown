@@ -1,7 +1,5 @@
 from distutils.util import strtobool
 import json
-import os
-import sys
 
 import pytest
 from azure.functions import HttpRequest
@@ -11,7 +9,7 @@ from functown.errors import ArgError
 
 
 def test_arghandler_convert():
-    '''Test the Parameter Conversion Methods to ensure they work properly'''
+    """Test the Parameter Conversion Methods to ensure they work properly"""
     args = RequestArgHandler(None)
 
     # direct pass through
@@ -29,14 +27,40 @@ def test_arghandler_convert():
     assert out == "baz"
 
     # bool conversion
-    out = args._convert("foo", "true", required=True, map_fct=lambda x: bool(strtobool(x)))
+    out = args._convert(
+        "foo", "true", required=True, map_fct=lambda x: bool(strtobool(x))
+    )
     assert out is True
-    out = args._convert("foo", "false", required=True, map_fct=lambda x: bool(strtobool(x)))
+    out = args._convert(
+        "foo", "false", required=True, map_fct=lambda x: bool(strtobool(x))
+    )
     assert out is False
     out = args._convert("foo", "false", required=True, map_fct="bool")
     assert out is False
     out = args._convert("foo", "true", required=True, map_fct="bool")
     assert out is True
+    out = args._convert("foo", True, required=True, map_fct="bool")
+    assert out is True
+    out = args._convert("foo", False, required=True, map_fct="bool")
+    assert out is False
+    out = args._convert("foo", None, required=False, map_fct="bool", default=True)
+    assert out is True
+    out = args._convert("foo", None, required=False, map_fct="bool", default=False)
+    assert out is False
+
+    # int conversion
+    out = args._convert("foo", "1", required=True, map_fct=int)
+    assert out == 1
+    out = args._convert("foo", "-100", required=True, map_fct=int)
+    assert out == -100
+    out = args._convert("foo", 1, required=True, map_fct=int)
+    assert out == 1
+    out = args._convert("foo", -99, required=True, map_fct=int)
+    assert out == -99
+    out = args._convert("foo", None, required=False, map_fct=int, default=1)
+    assert out == 1
+    out = args._convert("foo", None, required=False, map_fct=int, default=99)
+    assert out == 99
 
     # check allowed values
     out = args._convert("foo", "bar", allowed=["foo", "bar", "baz"])
@@ -61,8 +85,10 @@ def test_arghandler_convert():
 
 
 def test_arghandler_params():
-    '''Ensure that we can parse arguments from url query params'''
-    req = HttpRequest("GET", "foo/bar", params={"foo": "1", "bar": "true", "baz": "opt1"}, body=None)
+    """Ensure that we can parse arguments from url query params"""
+    req = HttpRequest(
+        "GET", "foo/bar", params={"foo": "1", "bar": "true", "baz": "opt1"}, body=None
+    )
     args = RequestArgHandler(req)
 
     # handle requests
@@ -88,8 +114,12 @@ def test_arghandler_params():
 
 
 def test_arghandler_body():
-    '''Ensure that we can parse arguments from request body'''
-    req = HttpRequest("GET", "foo/bar", body=json.dumps({"foo": "1", "bar": "true", "baz": "opt1"}).encode("utf-8"))
+    """Ensure that we can parse arguments from request body"""
+    req = HttpRequest(
+        "GET",
+        "foo/bar",
+        body=json.dumps({"foo": "1", "bar": "true", "baz": "opt1"}).encode("utf-8"),
+    )
     args = RequestArgHandler(req)
 
     # handle requests
@@ -115,11 +145,22 @@ def test_arghandler_body():
 
 
 def test_arghandler_querybody():
-    '''Ensure that we can parse arguments in combined fashion'''
+    """Ensure that we can parse arguments in combined fashion"""
     # split parameters and test all extrems
-    req3 = HttpRequest("GET", "foo/bar", params={"foo": "1", "bar": "true"}, body=json.dumps({"baz": "opt1"}).encode("utf-8"))
-    req2 = HttpRequest("GET", "foo/bar", body=json.dumps({"foo": "1", "bar": "true", "baz": "opt1"}).encode("utf-8"))
-    req1 = HttpRequest("GET", "foo/bar", params={"foo": "1", "bar": "true", "baz": "opt1"}, body=None)
+    req3 = HttpRequest(
+        "GET",
+        "foo/bar",
+        params={"foo": "1", "bar": "true"},
+        body=json.dumps({"baz": "opt1"}).encode("utf-8"),
+    )
+    req2 = HttpRequest(
+        "GET",
+        "foo/bar",
+        body=json.dumps({"foo": "1", "bar": "true", "baz": "opt1"}).encode("utf-8"),
+    )
+    req1 = HttpRequest(
+        "GET", "foo/bar", params={"foo": "1", "bar": "true", "baz": "opt1"}, body=None
+    )
 
     # iterate through different request types
     for req in [req1, req2, req3]:
@@ -148,7 +189,7 @@ def test_arghandler_querybody():
 
 
 def test_arghandler_route():
-    '''Ensure that we can parse arguments from request body'''
+    """Ensure that we can parse arguments from request body"""
     req = HttpRequest("GET", "foo/bar", route_params={"area": "foo"}, body=None)
     args = RequestArgHandler(req)
 

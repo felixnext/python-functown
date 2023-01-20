@@ -4,7 +4,7 @@
 
 ## Getting Started
 
-```
+```bash
 pip install functown
 ```
 
@@ -142,5 +142,7 @@ You can verify that the new version of the code was picked up by the first log s
 
 ## Notes
 
-If you find this library helpful or have suggestions please let me know.
-Also any contributions are welcome!
+* The `@handle_error` decorator returns additional information to be used in the development process. This can also expose infrormation to attackers, so use responsibly (i.e. make sure to disable for production environments).
+
+> ‼️ If you find this library helpful or have suggestions please let me know.
+Also any contributions are welcome! ‼️

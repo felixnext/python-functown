@@ -26,22 +26,22 @@ class RequestArgHandler:
         default=None,
     ):
         # check if required
-        if required and not arg:
+        if required and arg is None:
             raise ArgError(f"Argument {name} is not set, but required!")
 
-        # define mapping
-        if map_fct and arg:
-            # FIXME: check if the data is already of the correct type
+        # execute the mapping function (if set and arg is present)
+        if map_fct is not None and arg is not None:
             if isinstance(map_fct, str):
                 if map_fct == "bool":
-                    arg = bool(strtobool(arg))
+                    if not isinstance(arg, bool):
+                        arg = bool(strtobool(str(arg)))
                 else:
                     arg = getattr(arg, map_fct)()
             else:
                 arg = map_fct(arg)
 
         # check for default
-        if not arg and default:
+        if arg is None and default is not None:
             arg = default
 
         # checks if in list

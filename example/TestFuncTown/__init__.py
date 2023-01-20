@@ -10,7 +10,11 @@ import json
 import os
 
 import azure.functions as func
-from functown import handle_errors, RequestArgHandler, __version__ as ft_version
+
+try:
+    import functown_local as ft
+except ImportError:
+    import functown as ft
 
 from logging_helper import ListHandler
 
@@ -19,7 +23,7 @@ from logging_helper import ListHandler
 DEBUG = bool(strtobool(os.getenv("FUNC_DEBUG", "False")))
 
 
-@handle_errors(debug=True, log_all_errors=DEBUG, return_errors=DEBUG)
+@ft.handle_errors(debug=True, log_all_errors=DEBUG, return_errors=DEBUG)
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info("Python HTTP trigger function processed a request.")
 
@@ -27,10 +31,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logger = logging.getLogger("func_logger")
     logs = []
     logger.addHandler(ListHandler(logs))
-    logger.info(f"Using functown v{ft_version}")
+    logger.info(f"Using functown v{ft.__version__}")
 
     # generate args parser
-    args = RequestArgHandler(req)
+    args = ft.RequestArgHandler(req)
 
     # check different parameters
     body_param = args.get_body("body_param", required=False, default="no body param")
@@ -41,7 +45,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logger.info(f"query_param: {query_param}")
 
     # check for exception (not that this includes a mapping function)
-    # FIXME: the bool mapping throws an error if param is already a bool (passed in body)
     use_exeption = args.get_body_query("use_exception", False, "bool", default=False)
     logger.info(f"use_exeption: {use_exeption}")
     if use_exeption:
@@ -50,8 +53,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         raise Exception("This is a test exception")
 
     # retrieve numbers
-    # FIXME: this throws an error if the param is not given
-    print_num = args.get_body_query("print_num", False, map_fct=int, default="0")
+    print_num = args.get_body_query("print_num", False, map_fct=int, default=0)
     logger.info(f"print_num: {print_num}")
     for i in range(print_num):
         logger.info(f"print_num: {i}")
