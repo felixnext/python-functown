@@ -10,6 +10,7 @@ import json
 import os
 
 import azure.functions as func
+from opencensus.trace.tracer import Tracer
 
 try:
     import functown_local as ft
@@ -24,11 +25,21 @@ DEBUG = bool(strtobool(os.getenv("FUNC_DEBUG", "False")))
 INST_KEY = os.getenv("APP_INSIGHTS_KEY", None)
 
 
-@ft.clean()
+@ft.clean
 @ft.handle_errors(debug=True, log_all_errors=DEBUG, return_errors=DEBUG)
-@ft.log_metrics(instrumentation_key=INST_KEY, send_basics=True)
+@ft.metrics_all(
+    instrumentation_key=INST_KEY,
+    enable_logger=True,
+    send_basics=True,
+    enable_events=True,
+    enable_tracer=True,
+)
 def main(
-    req: func.HttpRequest, logger: logging.Logger, events: logging.Logger, **kwargs
+    req: func.HttpRequest,
+    logger: logging.Logger,
+    events: logging.Logger,
+    tracer: Tracer,
+    **kwargs,
 ) -> func.HttpResponse:
     logging.info("Python HTTP trigger function processed a request.")
 
@@ -80,7 +91,29 @@ def main(
     use_event = args.get_body_query("use_event", False, "bool", default=False)
     if use_event is True:
         events.info("This is a test event")
-        events.info("This is a test event with a dict", extra={"test": "dict"})
+        events.info(
+            "This is a test event with a dict",
+            extra={"custom_dimensions": {"test": "dict"}},
+        )
+
+    # generate sample logging messages
+    use_logger = args.get_body_query("use_logger", False, "bool", default=False)
+    if use_logger is True:
+        logger.info("This is a test log")
+        logger.info(
+            "This is a test log with a dict",
+            extra={"custom_dimensions": {"foo": "bar"}},
+        )
+
+    # check if tracer should be used
+    use_tracer = args.get_body_query("use_tracer", False, "bool", default=False)
+    if use_tracer is True:
+        # generate a span in which the entire stack trace is recorded and send to app insights
+        with tracer.span(name="test_span") as span:
+            span.add_attribute("test", "attribute")
+            foo_val = 2
+            bar_val = 10
+            bar_bal = foo_val + bar_val  # noqa: F841
 
     # generate report
     payload = {

@@ -1,16 +1,17 @@
 """Simple Decorator to clean main function for outer calls.
 
+FEAT: Integrate a callable class abstraction to avoid the clean decorator at the outmost layer?
+
 Copyright (c) 2023, Felix Geilert
 """
 
 from azure.functions import HttpRequest, HttpResponse
 
 
-def clean():
-    def handle_fct(function):
-        def execute(req: HttpRequest, *params, **kwargs) -> HttpResponse:
-            return function(req, *params, **kwargs)
+def clean(function):
+    """Decorator that cleans the *param and **kwargs from the function."""
 
-        return lambda req: execute(req)
+    def execute(req: HttpRequest, *params, **kwargs) -> HttpResponse:
+        return function(req, *params, **kwargs)
 
-    return handle_fct
+    return lambda req: execute(req)
