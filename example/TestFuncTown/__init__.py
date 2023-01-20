@@ -8,6 +8,7 @@ from distutils.util import strtobool
 import logging
 import json
 import os
+from typing import List
 
 import azure.functions as func
 from opencensus.trace.tracer import Tracer
@@ -17,8 +18,6 @@ try:
 except ImportError:
     import functown as ft
 
-from logging_helper import ListHandler
-
 
 # retrieve the debug flag from the environment
 DEBUG = bool(strtobool(os.getenv("FUNC_DEBUG", "False")))
@@ -26,7 +25,13 @@ INST_KEY = os.getenv("APP_INSIGHTS_KEY", None)
 
 
 @ft.clean
-@ft.handle_errors(debug=True, log_all_errors=DEBUG, return_errors=DEBUG)
+@ft.ErrorHandler(
+    debug=True,
+    log_all_errors=DEBUG,
+    return_errors=DEBUG,
+    enable_logger=True,
+    return_logs=True,
+)
 @ft.metrics_all(
     instrumentation_key=INST_KEY,
     enable_logger=True,
@@ -37,6 +42,7 @@ INST_KEY = os.getenv("APP_INSIGHTS_KEY", None)
 def main(
     req: func.HttpRequest,
     logger: logging.Logger,
+    logs: List[str],
     events: logging.Logger,
     tracer: Tracer,
     **kwargs,
@@ -44,8 +50,6 @@ def main(
     logging.info("Python HTTP trigger function processed a request.")
 
     # create a logger (allow to return log as list)
-    logs = []
-    logger.addHandler(ListHandler(logs))
     logger.info(f"Using functown v{ft.__version__}")
 
     # generate args parser

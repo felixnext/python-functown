@@ -1,7 +1,7 @@
 import logging
 
 
-class ListHandler(logging.Handler):
+class LogListHandler(logging.Handler):
     """List handler that retrives a reference to a list to append logs to"""
 
     def __init__(self, log_list):
