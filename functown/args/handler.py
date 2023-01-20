@@ -1,6 +1,6 @@
-'''
+"""
 Bunch of Handler Code for Arguments
-'''
+"""
 
 
 from distutils.util import strtobool
@@ -11,17 +11,27 @@ from azure.functions import HttpRequest
 from functown.errors import ArgError
 
 
-class RequestArgHandler():
+class RequestArgHandler:
     def __init__(self, req: HttpRequest):
         self.req = req
 
-    def _convert(self, name, arg, required=False, map_fct=None, allowed=None, list_map=None, default=None):
+    def _convert(
+        self,
+        name,
+        arg,
+        required=False,
+        map_fct=None,
+        allowed=None,
+        list_map=None,
+        default=None,
+    ):
         # check if required
         if required and not arg:
             raise ArgError(f"Argument {name} is not set, but required!")
 
         # define mapping
         if map_fct and arg:
+            # FIXME: check if the data is already of the correct type
             if isinstance(map_fct, str):
                 if map_fct == "bool":
                     arg = bool(strtobool(arg))
@@ -44,7 +54,9 @@ class RequestArgHandler():
 
             # check if value found
             if ls_arg not in allowed:
-                raise ArgError(f"Argument {name} should be one of {allowed} but got {arg}")
+                raise ArgError(
+                    f"Argument {name} should be one of {allowed} but got {arg}"
+                )
 
         return arg
 
@@ -57,25 +69,65 @@ class RequestArgHandler():
             logging.warning("Could not parse request body to json")
         return arg
 
-    def get_body(self, name, required=False, map_fct=None, allowed=None, list_map=None, default=None):
+    def get_body(
+        self,
+        name,
+        required=False,
+        map_fct=None,
+        allowed=None,
+        list_map=None,
+        default=None,
+    ):
         arg = self._parse_body(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
-    def get_query(self, name, required=False, map_fct=None, allowed=None, list_map=None, default=None):
+    def get_query(
+        self,
+        name,
+        required=False,
+        map_fct=None,
+        allowed=None,
+        list_map=None,
+        default=None,
+    ):
         arg = self.req.params.get(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
-    def get_route(self, name, required=False, map_fct=None, allowed=None, list_map=None, default=None):
+    def get_route(
+        self,
+        name,
+        required=False,
+        map_fct=None,
+        allowed=None,
+        list_map=None,
+        default=None,
+    ):
         arg = self.req.route_params.get(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
-    def get_body_query(self, name, required=False, map_fct=None, allowed=None, list_map=None, default=None):
+    def get_body_query(
+        self,
+        name,
+        required=False,
+        map_fct=None,
+        allowed=None,
+        list_map=None,
+        default=None,
+    ):
         arg = self.req.params.get(name)
         if not arg and self.req.get_body():
             arg = self._parse_body(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
-    def get_form(self, name: str, required: bool = False, map_fct=None, allowed=None, list_map=None, default=None):
+    def get_form(
+        self,
+        name: str,
+        required: bool = False,
+        map_fct=None,
+        allowed=None,
+        list_map=None,
+        default=None,
+    ):
         arg = None
         try:
             arg = self.req.form[name]
@@ -84,7 +136,7 @@ class RequestArgHandler():
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
     def get_file(self, name: str, required: bool = False):
-        '''Parses a file from the form data of the request'''
+        """Parses a file from the form data of the request"""
         file = None
 
         # retrieve data
