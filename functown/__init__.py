@@ -14,6 +14,6 @@ except Exception as ex:
 
 try:
     from . import metrics
-    from .metrics import log_metrics
+    from .metrics import metrics_all, metrics_logger, metrics_events, metrics_tracer
 except Exception as ex:
     logging.error(f"Unable to load metrics: {ex}")

@@ -1,4 +1,4 @@
-# FuncTown
+# 🎷 FuncTown 🎷
 
 `FuncTown` is a python library to make working with azure functions easier and remove boilerplate.
 
@@ -7,8 +7,6 @@
 ```bash
 pip install functown
 ```
-
-FIXME: Add better description of decorators
 
 After installing you can easily get your functions error checked (with an auto-response for execptions triggered):
 
@@ -50,6 +48,116 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 All this should remove boilerplate from Azure-Functions.
 
 🎷 Welcome to FuncTown! 🎷
+
+## Decorators
+
+Most of the functionality that `FuncTown` provides is through decorators.
+These decorators can be used to wrap your functions and provide additional functionality.
+
+Note that almost all decorators pass along additional arguments to your function.
+So it is generally a good idea to modify your function signature to accept these arguments:
+
+```python
+# instead of main(req: func.HttpRequest) -> func.HttpResponse:
+def main(req: func.HttpRequest, *params, **kwargs) -> func.HttpResponse:
+    # ...
+```
+
+> **Note:** The `last_decorator` parameter is used to indicate that this is the last decorator in the chain.
+> This makes sure that the signature of the function is consumable by Azure Functions.
+
+### `handle_errors`
+
+The `handle_errors` decorator can be used to wrap your function and provide error handling.
+It will catch any exception that is thrown in the function and provide a response to the user.
+
+```python
+from functown import handle_errors
+
+@handle_errors(debug=True, last_decorator=True)
+def main(req: func.HttpRequest, *params, **kwargs) -> func.HttpResponse:
+    logging.info('Python HTTP trigger function processed a request.')
+
+    # ...
+
+    return func.HttpResponse("success", status_code=200)
+```
+
+You can also specify the degree to which debug information is returned as part of the response
+with the following parameters:
+
+* `debug` (bool): Defines if general exceptions are written to the logs with stack trace (default: `False`)
+* `log_all_errors` (bool): Defines if all exceptions are written to the logs with stack trace (including errors that might explicitly contain user data such as `TokenError`) (default: `False`)
+* `return_errors` (bool): Defines if the error message is returned as part of the response (for quicker debugging) (default: `False`)
+
+### `metrics_all`
+
+The `metrics_all` decorator can be used to wrap your function and provide logging of metrics in Application Insights.
+This includes 4 major categories:
+
+* `enable_logger`: Enables sending of general `Trace` data to Application Insights through the use of a `logger` object passed to the function (of type `logging.Logger`)
+* `enable_events`: Enables sending of `CustomEvent` data to Application Insights through the use of a `events` object passed to the function (of type `logging.logger`)
+* `enable_tracer`: Enables sending of `Request` data to Application Insights through the use of a `tracer` object passed to the function (of type `opencensus.trace.tracer.Tracer`)
+FIXME: update metrics here
+* `enable_metrics`: Enables sending of `Metric` data to Application Insights through the use of a `metrics` object passed to the function (of type `opencensus.stats.stats.Stats`)
+
+Note that each of these elements has additional sub-parameters that can be set.
+
+#### logger
+
+```python
+from functown import metrics_logger
+from logging import Logger
+
+@metrics_logger(enable_logger=True, last_decorator=True)
+def main(req: func.HttpRequest, logger: Logger, *params, **kwargs) -> func.HttpResponse:
+    logger.info('Python HTTP trigger function processed a request.')
+
+    # ...
+
+    return func.HttpResponse("success", status_code=200)
+```
+
+#### events
+
+```python
+from functown import metrics_events
+from logging import Logger
+
+@metrics_events(enable_events=True, last_decorator=True)
+def main(req: func.HttpRequest, events: Logger, *params, **kwargs) -> func.HttpResponse:
+    # log event
+    events.info('Custom Event', extra={'custom_dimensions': {'foo': 'bar'}})
+
+    # ...
+
+    return func.HttpResponse("success", status_code=200)
+```
+
+#### tracer
+
+```python
+from functown import metrics_tracer
+from opencensus.trace.tracer import Tracer
+
+@metrics_tracer(enable_tracer=True, tracer_sample=1.0, last_decorator=True)
+def main(req: func.HttpRequest, tracer: Tracer, *params, **kwargs) -> func.HttpResponse:
+    # start span
+    with tracer.span(name="span_name") as span:
+        # everything in this block will be part of the span (and send sampled to Application Insights)
+        # ...
+
+    # ...
+
+    return func.HttpResponse("success", status_code=200)
+```
+
+#### metrics
+
+```python
+from functown import log_metrics
+# FIXME: implement
+```
 
 ## Versioning
 
@@ -132,6 +240,8 @@ curl -X POST -H "Content-Type: application/json" -d '{"body_param": "some body p
 > ⛔ **Note:** ️Think about shutting down your azure resources after you used them to avoid additional costs! ⛔️
 >
 > (esp. when using a non-consumption tier)
+
+**Note on App Insights:** Metrics and traces take a time to show up in the App Insights. You can also use the `logs` field in the response to see the logs of the function.
 
 ### Testing functown Code
 

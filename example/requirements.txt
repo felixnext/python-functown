@@ -8,3 +8,4 @@ time-helper
 
 # adding temporary deps for development testing
 # DO NOT COMMIT BELOW THIS LINE
+opencensus-ext-azure>=1.1.8

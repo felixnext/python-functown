@@ -49,10 +49,12 @@ https://opencensus.io/tracing/
 Copyright (c) 2023, Felix Geilert
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import os
 import sys
 import logging
-from typing import Callable
+from typing import Callable, Dict, Union, Type
 
 from azure.functions import HttpRequest, HttpResponse
 from opencensus.ext.azure.log_exporter import (
@@ -61,8 +63,14 @@ from opencensus.ext.azure.log_exporter import (
     AzureEventHandler,
 )
 from opencensus.ext.azure.trace_exporter import AzureExporter
+from opencensus.ext.azure import metrics_exporter
+from opencensus.tags import tag_map as tag_map_module
 from opencensus.trace.samplers import ProbabilitySampler
 from opencensus.trace.tracer import Tracer
+from opencensus.stats import aggregation as aggregation_module
+from opencensus.stats import measure as measure_module
+from opencensus.stats import stats as stats_module
+from opencensus.stats import view as view_module
 
 
 def modify_system_info(envelop: Envelope) -> bool:
@@ -150,8 +158,50 @@ def create_filter_keywords(keywords: list) -> Callable[[Envelope], bool]:
     return filter_keywords
 
 
-def log_metrics(
+class MetricType(Enum):
+    """The type of the metric."""
+
+    COUNTER = 1
+    """A counter metric."""
+    GAUGE = 2
+    """A gauge metric."""
+    SUM = 3
+    """A sum metric."""
+
+
+class MetricHandler:
+    """Handler class for metrics that allow to record values"""
+
+    def __init__(self):
+        pass
+
+    def record(self, value: Union[float, int], tags: Dict = None):
+        pass
+
+
+@dataclass
+class MetricDefinition:
+    """A definition of a metric.
+
+    Args:
+        name (str): The name of the metric.
+        description (str): The description of the metric.
+        unit (str): The unit of the metric.
+        aggregation (Aggregation): The aggregation of the metric.
+    """
+
+    name: str
+    description: str
+    unit: str
+    mtype: MetricType
+    dtype: Type[Union[int, float]]
+
+    # def _create_metric()
+
+
+def metrics_all(
     instrumentation_key: str,
+    enable_logger: bool = True,
     send_basics: bool = True,
     clean_logger: bool = False,
     logger_callback: Callable[[Envelope], bool] = None,
@@ -186,20 +236,21 @@ def log_metrics(
         def execute(req: HttpRequest, *params, **kwargs) -> HttpResponse:
             # separate try-catch to create log handler
             try:
-                # check for logger
-                logger = kwargs.get("logger", None)
-                if logger is None or clean_logger is True:
-                    logging.debug(f"Creating logger for {function.__name__}")
-                    logger = logging.getLogger(__name__)
+                if enable_logger:
+                    # check for logger
+                    logger = kwargs.get("logger", None)
+                    if logger is None or clean_logger is True:
+                        logging.debug(f"Creating logger for {function.__name__}")
+                        logger = logging.getLogger(__name__)
 
-                # create azure handler
-                log_handler = AzureLogHandler(
-                    connection_string=f"InstrumentationKey={instrumentation_key}"
-                )
-                if logger_callback is not None:
-                    log_handler.add_telemetry_processor(logger_callback)
-                logger.addHandler(log_handler)
-                kwargs["logger"] = logger
+                    # create azure handler
+                    log_handler = AzureLogHandler(
+                        connection_string=f"InstrumentationKey={instrumentation_key}"
+                    )
+                    if logger_callback is not None:
+                        log_handler.add_telemetry_processor(logger_callback)
+                    logger.addHandler(log_handler)
+                    kwargs["logger"] = logger
 
                 # create event handler
                 if enable_events:
@@ -223,6 +274,17 @@ def log_metrics(
                     kwargs["tracer"] = tracer
 
                 # TODO: integrate metrics
+                # FEAT: make sure that metrics allow for counters and timers
+                # FEAT: esp allow to log counter features (e.g. click rates based on properties)
+                # setup the view manager and the exporter
+                """vm_metrics = stats_module.stats.view_manager
+                exporter = metrics_exporter.new_metrics_exporter(
+                    connection_string=f"InstrumentationKey={instrumentation_key}"
+                )
+                vm_metrics.register_exporter(exporter)
+                measure_module.MeasureInt()
+                tmap = tag_map_module.TagMap()
+                tmap."""
             except Exception as ex:
                 logging.error(f"Failed to create Metrics Logger: {ex}")
                 raise ex
@@ -249,3 +311,58 @@ def log_metrics(
         return execute
 
     return handle_fct
+
+
+# create a list of sub decorators for each of the functionality (logger, events, tracer, metrics) as wrappers around metrics_all
+
+
+def metrics_logger(
+    intrumentation_key: str,
+    send_basics: bool = True,
+    logger_callback: Callable[[Envelope], bool] = None,
+    clean_logger: bool = False,
+    last_decorator: bool = False,
+):
+    """Decorator to log Trace to Azure Application Insights through `logger` object."""
+    return metrics_all(
+        intrumentation_key,
+        enable_logger=True,
+        send_basics=send_basics,
+        logger_callback=logger_callback,
+        clean_logger=clean_logger,
+        enable_events=False,
+        enable_tracer=False,
+        last_decorator=last_decorator,
+    )
+
+
+def metrics_events(
+    instrumentation_key: str,
+    event_callback: Callable[[Envelope], bool] = None,
+    last_decorator: bool = False,
+):
+    """Decorator to log CustomEvent to Azure Application Insights through `events` object."""
+    return metrics_all(
+        instrumentation_key,
+        enable_logger=False,
+        enable_events=True,
+        event_callback=event_callback,
+        enable_tracer=False,
+        last_decorator=last_decorator,
+    )
+
+
+def metrics_tracer(
+    instrumentation_key: str,
+    tracer_sample: float = 1.0,
+    last_decorator: bool = False,
+):
+    """Decorator to log Trace to Azure Application Insights through `tracer` object."""
+    return metrics_all(
+        instrumentation_key,
+        enable_logger=False,
+        enable_events=False,
+        enable_tracer=True,
+        tracer_sample=tracer_sample,
+        last_decorator=last_decorator,
+    )
