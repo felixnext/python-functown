@@ -49,6 +49,10 @@ All this should remove boilerplate from Azure-Functions.
 
 🎷 Welcome to FuncTown! 🎷
 
+## Versioning
+
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the tags on this repository.
+
 ## Run Example
 
 The source folder also includes an `example` function that provides a basic azure function,
@@ -56,9 +60,87 @@ that leverages the different functionality of the library.
 
 You can create a new Functions app in your Azure Subscripton to test it. Follow these steps:
 
-1. Create a new Functions App (note that this should at least be Python 3.8 and a consumption tier is recommended)
-2. Publish the content of the example folder to the functions app (through VS Code Plug-In or through CLI)
-3. Create a new Application Insights Instance through your Browser in the same resource group as the Functions App
-4. Take the telemetry key from the App Insights and paste it to your
+1. Login to your Azure Portal in the browser
+2. Create a new Functions App (note that this should at least be Python 3.8 and a consumption tier is recommended)
+    ![Create Fct App](assets/example_create-fct.png)
+3. Publish the content of the example folder to the functions app (through VS Code Plug-In or through CLI) - I usually use VSCode directly:
+    ![Upload Fct App](assets/example_upload-fct.png)
+4. Create a new Application Insights Instance through your Browser in the same resource group as the Functions App
+    * Note: Check here - sometimes this instance is already created directly with your Function App
+5. Take the `instrumentation key` from the App Insights (found in overview blade) and copy it
+6. Go to the Function App in Azure and to the Configuration Blade. There create the config settings specified in `example/config.tmp.json` (use the copied App Insights Instrumentation Key here)
+    ![Config](assets/example_config-settings.png)
+7. To run the curl commands (you could also test by going on the `TestFuncTown` Example function in your browser) we need a function app key (found under the `App Keys` blade):
+    ![App Keys](assets/example_get-key.png)
 
 You can now use `curl` to test various commands against the endpoint:
+
+```bash
+# Write a list of curl commands to test the different functionality of the example function
+
+# set the name of your function app (e.g. functownexample) and the key
+# note that the function app name might vary and you can find it on the overview blade of your function app
+FAPP="functownexample"
+FAPP_KEY="YOUR_APP_KEY"
+
+# test the basic functionality
+curl -X POST -H "Content-Type: application/json" -d '{"print_num": "2", "req": "some req param"}' "https://${FAPP}.azurewebsites.net/api/TestFuncTown?code=${FAPP_KEY}"
+# Expected output:
+# {
+#   "completed": true,
+#   "results": {
+#     "body_param": "no body param",
+#     "query_param": "no query param",
+#     "use_exeption": null,
+#     "print_num": 2,
+#     "print_list": null,
+#     "req_param": "some req param"
+#   },
+#   "logs": [
+#     "Using functown v0.1.7",
+#     "body_param: no body param",
+#     "query_param: no query param",
+#     "use_exeption: None",
+#     "print_num: 2",
+#     "print_num: 0",
+#     "print_num: 1",
+#     "print_list: None",
+#     "req_param: some req param"
+#   ]
+# }
+
+# you can also test throwing an exception:
+curl -X POST -H "Content-Type: application/json" -d '{"use_exeption": "true"}' "https://${FAPP}.azurewebsites.net/api/TestFuncTown?code=${FAPP_KEY}"
+# Expected output:
+# {
+#   "user_message": "This function executed unsuccessfully",
+#   "type": "<class 'TypeError'>",
+#   "value": "'str' object cannot be interpreted as an integer",
+#   "trace": [
+#     "error_decorator.py:79:111 - Vars: ('req', 'ex')",
+#     "__init__.py:22:54 - Vars: ('req', 'logger', 'logs', 'args', 'body_param', 'query_param', 'use_exeption', 'print_num', 'i', 'print_list', 'req_param', 'payload')"
+#   ]
+# }
+
+# some further curl commands to try:
+curl -X POST -H "Content-Type: application/json" -d '{"print_num": "2", "print_list": ["a", "b", "c"]}' "https://${FAPP}.azurewebsites.net/api/TestFuncTown?code=${FAPP_KEY}"
+curl -X POST -H "Content-Type: application/json" -d '{"body_param": "some body param", "query_param": "some query param", "req": "required"}' "https://${FAPP}.azurewebsites.net/api/TestFuncTown?code=${FAPP_KEY}"
+```
+
+> ⛔ **Note:** ️Think about shutting down your azure resources after you used them to avoid additional costs! ⛔️
+>
+> (esp. when using a non-consumption tier)
+
+### Testing functown Code
+
+This function also allows to test changes to functown in the development process.
+For that simply copy the current `functown` folder into the `example` folder and redeploy the function app.
+
+You should also update the version number in the `__init__.py` file of the `functown` folder before (which needs to be done for any changes, see section on `Versioning`).
+
+You can verify that the new version of the code was picked up by the first log statement in your return.
+
+## Notes
+
+If you find this library helpful or have suggestions please let me know.
+Also any contributions are welcome!
