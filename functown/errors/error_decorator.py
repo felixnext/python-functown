@@ -11,17 +11,25 @@ import logging
 
 from azure.functions import HttpResponse
 
-from functown.utils import BaseDecorator
+from functown.utils import BaseDecorator, LogListHandler
 from .errors import TokenError, HandlerError, ArgError
 
 
 class ErrorHandler(BaseDecorator):
+    """Decorator to handle errors inside of Azure Function Code.
+
+    This might add two additional parameters to the inner function signature:
+    - logger: logging.Logger (if enable_logger is True)
+    - logs: List[str] (if return_logs is True)
+    """
+
     def __init__(
         self,
-        debug: bool = False,
-        log_all_errors: bool = True,
-        return_errors: bool = True,
-        enable_logger: bool = True,
+        debug: bool = True,
+        log_all_errors: bool = False,
+        return_errors: bool = False,
+        enable_logger: bool = False,
+        return_logs: bool = False,
         clean_logger: bool = True,
         **kwargs,
     ):
@@ -32,6 +40,7 @@ class ErrorHandler(BaseDecorator):
         self.log_all_errors = log_all_errors
         self.return_errors = return_errors
         self.enable_logger = enable_logger
+        self.return_logs = return_logs
         self.clean_logger = clean_logger
 
     def _send_response(
@@ -39,6 +48,7 @@ class ErrorHandler(BaseDecorator):
         ex: Exception,
         code: int,
         msg: str = None,
+        logs: List[str] = None,
         log_error: bool = False,
     ):
         msg = msg if msg else f"Got error: {type(ex)}"
@@ -53,6 +63,10 @@ class ErrorHandler(BaseDecorator):
             # update mime type
             mime = "application/json"
             msg = {"user_message": msg}
+
+            # check if logs are set
+            if logs is not None:
+                msg["logs"] = logs
 
             # add exception and trace to message
             msg["type"] = str(exc_type)
@@ -90,11 +104,20 @@ class ErrorHandler(BaseDecorator):
         Note: Since this decorator returns response from the function it is advised to use it
         as the last (outermost) decorator
         """
+        logs = None
+
         # check if logger should be created
         if self.enable_logger:
             try:
                 # check for logger
                 logger = self._create_logger(self.clean_logger, *args, **kwargs)
+
+                # add list system to logger
+                if self.return_logs is True:
+                    logger.addHandler(LogListHandler(logs))
+                    kwargs["logs"] = logs
+
+                # add logger to kwargs
                 if logger is not None:
                     kwargs["logger"] = logger
             except Exception as ex:
@@ -103,8 +126,13 @@ class ErrorHandler(BaseDecorator):
         else:
             logger = logging
 
+        # check if outermost
+        if self.is_outer is False:
+            logger.warning(
+                "It is advised to use ErrorHandler as the outermost decorator"
+            )
+
         try:
-            # FEAT: check if logger is already passed
             return func(*args, **kwargs)
         except TokenError as ex:
             logger.error("Token Error")
@@ -112,6 +140,7 @@ class ErrorHandler(BaseDecorator):
                 ex,
                 ex.code,
                 msg=ex.msg,
+                logs=logs,
                 log_error=self.log_all_errors,
             )
         except HandlerError as ex:
@@ -120,6 +149,7 @@ class ErrorHandler(BaseDecorator):
                 ex,
                 ex.code,
                 msg=ex.msg,
+                logs=logs,
                 log_error=self.log_all_errors,
             )
         except ArgError as ex:
@@ -128,6 +158,7 @@ class ErrorHandler(BaseDecorator):
                 ex,
                 ex.code,
                 msg=ex.msg,
+                logs=logs,
                 log_error=self.log_all_errors,
             )
         except Exception as ex:
@@ -136,5 +167,6 @@ class ErrorHandler(BaseDecorator):
                 ex,
                 500,
                 msg="This function executed unsuccessfully",
+                logs=logs,
                 log_error=self.debug or self.log_all_errors,
             )
