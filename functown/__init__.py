@@ -1,12 +1,13 @@
-__version__ = "0.2.0"
+__version__ = "1.0.0"
 
 import logging
 
 try:
     from . import errors
-    from .errors import handle_errors
+    from .errors import ErrorHandler
     from .args import RequestArgHandler
-    from .clean_decorator import clean
+    from .utils.clean_decorator import clean
+    from . import utils
 
     from . import auth
 except Exception as ex:

@@ -1,7 +1,2 @@
-from .error_decorator import handle_errors
-from .errors import (
-    RequestError,
-    HandlerError,
-    TokenError,
-    ArgError
-)
+from .error_decorator import ErrorHandler
+from .errors import RequestError, HandlerError, TokenError, ArgError

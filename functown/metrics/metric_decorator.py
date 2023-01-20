@@ -51,8 +51,6 @@ Copyright (c) 2023, Felix Geilert
 
 from dataclasses import dataclass
 from enum import Enum
-import os
-import sys
 import logging
 from typing import Callable, Dict, Union, Type
 
@@ -73,130 +71,7 @@ from opencensus.stats import stats as stats_module
 from opencensus.stats import view as view_module
 
 
-def modify_system_info(envelop: Envelope) -> bool:
-    """Appends System information (os, python, cpu, memory) to the message.
-
-    Args:
-        envelop (Envelope): The telemetry item.
-
-    Returns:
-        bool: Whether to keep the item.
-    """
-    system_info = (
-        f"System: {sys.platform} {sys.version} {os.cpu_count()} {os.getloadavg()}"
-    )
-    envelop.data.base_data.message = f"{envelop.data.base_data.message} {system_info}"
-
-    return True
-
-
-def filter_debug(envelop: Envelope) -> bool:
-    """Filter to remove debug messages from Azure Application Insights.
-
-    Args:
-        envelop (Envelope): The telemetry item.
-
-    Returns:
-        bool: Whether to keep the item.
-    """
-    if envelop.data.base_data.severity_level == 1:
-        return False
-    return True
-
-
-def create_filter_ids(cur_id, ids: list) -> Callable[[Envelope], bool]:
-    """Create a filter to remove specific ids from Azure Application Insights.
-
-    Args:
-        cur_id (str): The current id of the function.
-        ids (list): A list of ids to remove.
-
-    Returns:
-        Callable[[Envelope], bool]: A filter function.
-    """
-
-    def filter_ids(envelop: Envelope) -> bool:
-        """Filter to remove specific ids from Azure Application Insights.
-
-        Args:
-            envelop (Envelope): The telemetry item.
-
-        Returns:
-            bool: Whether to keep the item.
-        """
-        if cur_id in ids:
-            return False
-        return True
-
-    return filter_ids
-
-
-def create_filter_keywords(keywords: list) -> Callable[[Envelope], bool]:
-    """Create a filter to remove specific keywords from Azure Application Insights.
-
-    Args:
-        keywords (list): A list of keywords to remove.
-
-    Returns:
-        Callable[[Envelope], bool]: A filter function.
-    """
-
-    def filter_keywords(envelop: Envelope) -> bool:
-        """Filter to remove specific keywords from Azure Application Insights.
-
-        Args:
-            envelop (Envelope): The telemetry item.
-
-        Returns:
-            bool: Whether to keep the item.
-        """
-        for keyword in keywords:
-            if keyword in envelop.data.base_data.message:
-                return False
-        return True
-
-    return filter_keywords
-
-
-class MetricType(Enum):
-    """The type of the metric."""
-
-    COUNTER = 1
-    """A counter metric."""
-    GAUGE = 2
-    """A gauge metric."""
-    SUM = 3
-    """A sum metric."""
-
-
-class MetricHandler:
-    """Handler class for metrics that allow to record values"""
-
-    def __init__(self):
-        pass
-
-    def record(self, value: Union[float, int], tags: Dict = None):
-        pass
-
-
-@dataclass
-class MetricDefinition:
-    """A definition of a metric.
-
-    Args:
-        name (str): The name of the metric.
-        description (str): The description of the metric.
-        unit (str): The unit of the metric.
-        aggregation (Aggregation): The aggregation of the metric.
-    """
-
-    name: str
-    description: str
-    unit: str
-    mtype: MetricType
-    dtype: Type[Union[int, float]]
-
-    # def _create_metric()
+# FIXME: refactor this into separate decorators
 
 
 def metrics_all(

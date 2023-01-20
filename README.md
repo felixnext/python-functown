@@ -65,6 +65,7 @@ def main(req: func.HttpRequest, *params, **kwargs) -> func.HttpResponse:
 
 > **Note:** The `last_decorator` parameter is used to indicate that this is the last decorator in the chain.
 > This makes sure that the signature of the function is consumable by Azure Functions.
+> Alternatively you can also the the `@functown.clean` decorator to clean up the signature.
 
 ### `handle_errors`
 
