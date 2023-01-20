@@ -8,6 +8,8 @@
 pip install functown
 ```
 
+FIXME: Add better description of decorators
+
 After installing you can easily get your functions error checked (with an auto-response for execptions triggered):
 
 ```python
@@ -134,9 +136,11 @@ curl -X POST -H "Content-Type: application/json" -d '{"body_param": "some body p
 ### Testing functown Code
 
 This function also allows to test changes to functown in the development process.
-For that simply copy the current `functown` folder into the `example` folder and redeploy the function app.
+For that simply copy the current `functown` folder into the `example` folder and rename it to `functown_local`, then redeploy the function app.
 
 You should also update the version number in the `__init__.py` file of the `functown` folder before (which needs to be done for any changes, see section on `Versioning`).
+
+> **Note:** When you update dependencies you also need to temporarily add these dependencies to the `requirements.txt` file in the `example` folder (and remove them before commiting!).
 
 You can verify that the new version of the code was picked up by the first log statement in your return.
 

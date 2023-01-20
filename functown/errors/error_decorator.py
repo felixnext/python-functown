@@ -43,7 +43,7 @@ def _send_response(
         msg = json.dumps(msg)
 
     # check for logs
-    if log_error == True:
+    if log_error is True:
         exc_obj = ex.msg if hasattr(ex, "msg") else exc_obj
         logging.error(f"Error ({exc_type}): {str(ex)} (Obj: {exc_obj})")
         logging.error("Trace:")
@@ -66,8 +66,17 @@ def _get_trace(tb: TracebackType) -> List[str]:
     return names
 
 
-def handle_errors(debug=False, log_all_errors=False, return_errors=False):
+def handle_errors(
+    debug: bool = False,
+    log_all_errors: bool = False,
+    return_errors: bool = False,
+    clean_logger: bool = False,
+    last_decorator: bool = False,
+):
     """Decorator to handle errors
+
+    Note: Since this decorator returns response from the function it is advised to use it
+    as the last (outermost) decorator
 
     Args:
         debug: Defines of errors should be printed only for code fails
@@ -76,9 +85,23 @@ def handle_errors(debug=False, log_all_errors=False, return_errors=False):
     """
 
     def handle_fct(function):
-        def execute(req: HttpRequest) -> HttpResponse:
+        def execute(req: HttpRequest, *params, **kwargs) -> HttpResponse:
+            # FEAT: generate logger for code
             try:
-                return function(req)
+                # check for logger
+                logger = kwargs.get("logger", None)
+                if logger is not None:
+                    del kwargs["logger"]
+                if logger is None or clean_logger is True:
+                    logging.debug(f"Creating logger for {function.__name__}")
+                    logger = logging.getLogger(__name__)
+            except Exception as ex:
+                logging.error(f"Failed to get logger: {ex}")
+                raise ex
+
+            try:
+                # FEAT: check if logger is already passed
+                return function(req, logger=logger, *params, **kwargs)
             except TokenError as ex:
                 logging.error("Token Error")
                 return _send_response(
@@ -116,6 +139,9 @@ def handle_errors(debug=False, log_all_errors=False, return_errors=False):
                     log_error=debug or log_all_errors,
                 )
 
+        # check for last decorator
+        if last_decorator is True:
+            return lambda req: execute(req)
         return execute
 
     return handle_fct
