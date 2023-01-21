@@ -1,5 +1,20 @@
 """Decorator for tracing function calls inside of Application Insights.
 
+Examples how to use tracing:
+
+```python
+# basic trace
+with tracer.span("my_span"):
+    # do something
+
+# trace with extra data
+with tracer.span("my_span", attributes={"key": "value"}):
+    # do something
+```
+
+For more info on tracing, see:
+https://opencensus.io/tracing/
+
 Copyright (c) 2023, Felix Geilert
 """
 
