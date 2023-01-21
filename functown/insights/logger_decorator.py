@@ -1,5 +1,31 @@
 """Builds a logging handler for application insights.
 
+This also provides a bunch of examples of callback_functions that can modify filter values.
+It is also possible to run a custom compose of these filters and modifiers:
+
+```python
+def my_filter(envelop: Envelope) -> bool:
+    if debug_filter(envelop):
+        return False
+    modify_system_info(envelop)
+    return True
+```
+
+Examples how to use logger:
+
+```python
+# basic trace
+logger.info("This is a log message")
+# trace with extra data
+logger.info("This is a log message", extra={"key": "value"})
+# trace exception
+ex = ...
+logger.exception("Log found exception", exc_info=ex)
+```
+
+For a full guide on how to use the logger, see:
+https://learn.microsoft.com/en-us/azure/azure-monitor/app/opencensus-python
+
 Copyright (c) 2023, Felix Geilert
 """
 
