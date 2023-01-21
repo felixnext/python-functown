@@ -1,10 +1,3 @@
-from .metric_decorator import (
-    metrics_all,
-    metrics_logger,
-    metrics_events,
-    metrics_tracer,
-)
-
 from .callbacks import (
     filter_debug,
     create_filter_ids,
@@ -14,7 +7,10 @@ from .callbacks import (
 
 from .base import InsightsDecorator
 
-from .metrics import MetricType, MetricHandler, MetricSpec
+from .metrics import MetricType, Metric, MetricSpec
 
 from .logger_decorator import InsightsLogs
+from .event_decorator import InsightsEvents
+from .tracer_decorator import InsightsTracer
+from .metric_decorator import InsightsMetrics
 from .all_decorator import Insights

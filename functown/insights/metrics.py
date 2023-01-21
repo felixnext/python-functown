@@ -1,3 +1,9 @@
+"""Helper classes for metrics.
+
+Copyright (c) 2023, Felix Geilert
+"""
+
+
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Union, Type
@@ -14,7 +20,7 @@ class MetricType(Enum):
     """A sum metric."""
 
 
-class MetricHandler:
+class Metric:
     """Handler class for metrics that allow to record values"""
 
     def __init__(self):

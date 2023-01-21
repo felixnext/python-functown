@@ -1,5 +1,5 @@
 """
-Example function using functown
+Example function to test error handling capabilities.
 
 Copyright (c) 2023, Felix Geilert
 """

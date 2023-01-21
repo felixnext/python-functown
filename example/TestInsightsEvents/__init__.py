@@ -1,5 +1,5 @@
 """
-Example function using functown
+Example function to test insights events
 
 Copyright (c) 2023, Felix Geilert
 """
@@ -34,11 +34,6 @@ INST_KEY = os.getenv("APP_INSIGHTS_KEY", None)
     instrumentation_key=INST_KEY,
     enable_events=True,
 )
-@ft.InsightsLogHandler(
-    instrumentation_key=INST_KEY,
-    enable_logger=True,
-    clean_logger=False,
-)
 def main(
     req: func.HttpRequest,
     logger: logging.Logger,
@@ -63,21 +58,11 @@ def main(
             extra={"custom_dimensions": {"test": "dict"}},
         )
 
-    # generate sample logging messages
-    use_logger = args.get_body_query("use_logger", False, "bool", default=False)
-    if use_logger is True:
-        logger.info("This is a test log")
-        logger.info(
-            "This is a test log with a dict",
-            extra={"custom_dimensions": {"foo": "bar"}},
-        )
-
     # generate report
     payload = {
         "completed": True,
         "results": {
             "use_event": use_event,
-            "use_logger": use_logger,
         },
         "logs": logs,
     }

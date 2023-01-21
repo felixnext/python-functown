@@ -15,7 +15,12 @@ except Exception as ex:
 
 try:
     from . import insights
-    from .insights import InsightsLogHandler, InsightsHandler
-    from .insights import metrics_all, metrics_logger, metrics_events, metrics_tracer
+    from .insights import (
+        InsightsLogs,
+        InsightsMetrics,
+        InsightsEvents,
+        InsightsTracer,
+        Insights,
+    )
 except Exception as ex:
     logging.error(f"Unable to load metrics: {ex}")
