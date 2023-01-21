@@ -1,5 +1,7 @@
 """
 Function decorator that should make error handling easier
+
+Copyright (c) 2023, Felix Geilert
 """
 
 from types import TracebackType
@@ -33,7 +35,7 @@ class ErrorHandler(BaseDecorator):
         clean_logger: bool = True,
         **kwargs,
     ):
-        super().__init__(None, **kwargs)
+        super().__init__(None, added_kw=["logs", "logger"], **kwargs)
 
         # set error handling
         self.debug = debug
@@ -129,7 +131,9 @@ class ErrorHandler(BaseDecorator):
         # check if outermost
         if self.is_outer is False:
             logger.warning(
-                "It is advised to use ErrorHandler as the outermost decorator"
+                "It is advised to use ErrorHandler as the first decorator, "
+                f"it is current at the {self.__class__.__decorator_count} level."
+                "(Should be 0)"
             )
 
         try:

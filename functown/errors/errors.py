@@ -1,9 +1,11 @@
-
 class RequestError(Exception):
     def __init__(self, msg: str, code: int = None, *args: object) -> None:
         super().__init__(*args)
         self.msg = msg
         self.code = 500 if None else code
+
+    def __str__(self) -> str:
+        return f"Error ({self.code}): {self.msg}"
 
 
 class HandlerError(RequestError):
