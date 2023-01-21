@@ -14,7 +14,7 @@ import logging
 from azure.functions import HttpResponse
 
 from functown.utils import BaseDecorator, LogListHandler
-from .errors import TokenError, HandlerError, ArgError
+from .errors import RequestError
 
 
 class ErrorHandler(BaseDecorator):
@@ -23,6 +23,23 @@ class ErrorHandler(BaseDecorator):
     This might add two additional parameters to the inner function signature:
     - logger: logging.Logger (if enable_logger is True)
     - logs: List[str] (if return_logs is True)
+
+    Args:
+        debug (bool, optional): If True, the error will be returned to the user.
+            Otherwise it will just send `general_error_msg` in a 500. Defaults to True.
+        log_all_errors (bool, optional): If True, all errors will be send to the logger.
+            Defaults to False.
+        return_errors (bool, optional): If True, the error will be returned to the user.
+            This means the response is a json object. Defaults to False.
+        enable_logger (bool, optional): If True, a logger will be added to the function.
+            The logger will be passed through as `logger` param. Defaults to False.
+        return_logs (bool, optional): If True, the logs will be returned to the user.
+            This only happens if `debug` is enabled. Defaults to False.
+        clean_logger (bool, optional): If True, loggers from outer layers will be
+            overwritten. Defaults to True.
+        general_error_msg (str, optional): The message that will be returned to the user
+            in the case of a general exception (otherwise returns RequestError.msg).
+            Defaults to "This function executed unsuccessfully.".
     """
 
     def __init__(
@@ -33,6 +50,7 @@ class ErrorHandler(BaseDecorator):
         enable_logger: bool = False,
         return_logs: bool = False,
         clean_logger: bool = True,
+        general_error_msg: str = "This function executed unsuccessfully.",
         **kwargs,
     ):
         super().__init__(None, added_kw=["logs", "logger"], **kwargs)
@@ -44,6 +62,7 @@ class ErrorHandler(BaseDecorator):
         self.enable_logger = enable_logger
         self.return_logs = return_logs
         self.clean_logger = clean_logger
+        self.general_error_msg = general_error_msg
 
     def _send_response(
         self,
@@ -136,28 +155,11 @@ class ErrorHandler(BaseDecorator):
                 "(Should be 0)"
             )
 
+        # execute main loop
         try:
             return func(*args, **kwargs)
-        except TokenError as ex:
-            logger.error("Token Error")
-            return self._send_response(
-                ex,
-                ex.code,
-                msg=ex.msg,
-                logs=logs,
-                log_error=self.log_all_errors,
-            )
-        except HandlerError as ex:
-            logger.error("Handler Error")
-            return self._send_response(
-                ex,
-                ex.code,
-                msg=ex.msg,
-                logs=logs,
-                log_error=self.log_all_errors,
-            )
-        except ArgError as ex:
-            logger.error("Argument Error")
+        except RequestError as ex:
+            logger.error(ex.__class__.__name__)
             return self._send_response(
                 ex,
                 ex.code,
@@ -170,7 +172,7 @@ class ErrorHandler(BaseDecorator):
             return self._send_response(
                 ex,
                 500,
-                msg="This function executed unsuccessfully",
+                msg=self.general_error_msg,
                 logs=logs,
                 log_error=self.debug or self.log_all_errors,
             )

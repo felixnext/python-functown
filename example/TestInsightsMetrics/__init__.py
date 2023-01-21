@@ -31,7 +31,7 @@ INST_KEY = os.getenv("APP_INSIGHTS_KEY", None)
     enable_logger=True,
     return_logs=True,
 )
-@ft.metrics_all(
+@ft.InsightsMetricHandler(
     instrumentation_key=INST_KEY,
     enable_logger=True,
     send_basics=True,

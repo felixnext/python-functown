@@ -10,6 +10,11 @@ import logging
 from inspect import Signature, Parameter, signature
 from typing import Dict, Any, Union, List
 
+from uuid import uuid4 as uuid
+
+
+ADDRESS_PARAM = "_address"
+
 
 class BaseDecorator(object):
     """Base Decorator class.
@@ -38,7 +43,8 @@ class BaseDecorator(object):
     # NOTE: this has to be done on a class level, since each decorator is a new instance
     __decorator_count: Dict[int, int] = {}
     # last seen signature
-    __inner_signature: Signature = None
+    # NOTE: this is used to clean up the outer function layer
+    __inner_signature: Dict[int, Signature] = {}
 
     def __init__(
         self,
@@ -52,6 +58,7 @@ class BaseDecorator(object):
         self.is_outer = True
         self.mask_signature = mask_signature
         self.added_kw = added_kw if added_kw else []
+        self.__address = None
 
     @property
     def level(self) -> int:
@@ -59,8 +66,7 @@ class BaseDecorator(object):
 
         First decorator is level 0, second is level 1, etc.
         """
-        func_address = id(self.func)
-        return self.__class__.__decorator_count[func_address] - 1
+        return self.__class__.__decorator_count[self.__address] - 1
 
     def _get(self, name: str, pos=0, *args, **kwargs) -> Union[Any, None]:
         """Retrieves an item either by name or by position."""
@@ -101,21 +107,19 @@ class BaseDecorator(object):
         """
         return func(*args, **kwargs)
 
-    def __increase_count(self, func):
+    def __increase_count(self, func, address):
         """Retrieves the function id and increases the count of the decorator."""
         # check if the function is already registered
-        # FIXME: this is not multi decorator safe
-        func_address = id(func)
-        if func_address not in self.__decorator_count:
-            self.__class__.__decorator_count[func_address] = 0
+        if address not in self.__decorator_count:
+            self.__class__.__decorator_count[address] = 0
 
         # increase the count
-        self.__class__.__decorator_count[func_address] += 1
-        if self.__class__.__decorator_count[func_address] > 1:
+        self.__class__.__decorator_count[address] += 1
+        if self.__class__.__decorator_count[address] > 1:
             self.is_outer = False
 
         # update the inner signature
-        self.__inner_signature = signature(func)
+        self.__class__.__inner_signature[address] = signature(func)
 
     def __call__(self, *args, **kwargs):
         """Call the decorator.
@@ -127,15 +131,31 @@ class BaseDecorator(object):
         if self.func is None:
             # retrieve the function from the arguments
             self.func = args[0]
-            self.__increase_count(self.func)
+
+            # check if self.func is part of another BaseDecorator call
+            is_decorator = self.func.__qualname__.startswith("BaseDecorator")
+
+            if is_decorator == False:
+                # TODO:
 
             def execute(*args, **kwargs):
+                # check to get address from kwargs (or generate)
+                self.__address = kwargs.get(ADDRESS_PARAM, uuid().hex)
+                self.__increase_count(self.func, self.__address)
+
+                # check if self.func is a call on the BaseDecorator object
+                if is_decorator:
+                    kwargs[ADDRESS_PARAM] = self.__address
+                    return self.run(self.func, *args, **kwargs)
+
+                # check if the address should be removed
+                if ADDRESS_PARAM in kwargs:
+                    del kwargs[ADDRESS_PARAM]
                 return self.run(self.func, *args, **kwargs)
 
             # clean additional arguments from the signature return for the outer decorator
             if self.mask_signature:
-                sig = self.__inner_signature
-                # sig = signature(execute)
+                sig = self.__class__.__inner_signature.get(self.__address)
 
                 # get all parameters to replace
                 kws = self.added_kw

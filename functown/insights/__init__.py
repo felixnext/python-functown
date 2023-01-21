@@ -12,4 +12,9 @@ from .callbacks import (
     modify_system_info,
 )
 
+from .base import InsightsDecorator
+
 from .metrics import MetricType, MetricHandler, MetricSpec
+
+from .logger_decorator import InsightsLogs
+from .all_decorator import Insights
