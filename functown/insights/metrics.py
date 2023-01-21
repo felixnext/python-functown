@@ -100,13 +100,13 @@ class Metric:
         tag_map = self.tag
         if columns is not None:
             tag_map = tag_map_module.TagMap()
-            for key, value in columns.items():
+            for key, cval in columns.items():
                 if key not in self.spec.columns:
                     logging.warning(
                         f"Key {key} is not a valid column for this metric. Ignoring."
                     )
                     continue
-                tag_map.insert(key, value)
+                tag_map.insert(key, cval)
 
         # check if value is float, int or str
         if isinstance(value, float):
