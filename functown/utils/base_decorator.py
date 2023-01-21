@@ -135,8 +135,10 @@ class BaseDecorator(object):
             # check if self.func is part of another BaseDecorator call
             is_decorator = self.func.__qualname__.startswith("BaseDecorator")
 
+            # FIXME: find solution for counting
             if is_decorator == False:
                 # TODO:
+                pass
 
             def execute(*args, **kwargs):
                 # check to get address from kwargs (or generate)

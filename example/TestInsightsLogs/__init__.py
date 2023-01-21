@@ -1,5 +1,5 @@
 """
-Example function using functown
+Example function to test insights logging and tracing
 
 Copyright (c) 2023, Felix Geilert
 """
@@ -41,7 +41,6 @@ def main(
     req: func.HttpRequest,
     logger: logging.Logger,
     logs: List[str],
-    events: logging.Logger,
     tracer: Tracer,
     **kwargs,
 ) -> func.HttpResponse:
@@ -52,51 +51,6 @@ def main(
 
     # generate args parser
     args = ft.RequestArgHandler(req)
-
-    # check different parameters
-    body_param = args.get_body("body_param", required=False, default="no body param")
-    logger.info(f"body_param: {body_param}")
-    query_param = args.get_query(
-        "query_param", required=False, default="no query param"
-    )
-    logger.info(f"query_param: {query_param}")
-
-    # check for exception (not that this includes a mapping function)
-    use_exeption = args.get_body_query("use_exception", False, "bool", default=False)
-    logger.info(f"use_exeption: {use_exeption}")
-    if use_exeption:
-        # this should raise an exception that is handled by the decorator
-        logger.info("raising exception")
-        raise Exception("This is a test exception")
-
-    # retrieve numbers
-    print_num = args.get_body_query("print_num", False, map_fct=int, default=0)
-    logger.info(f"print_num: {print_num}")
-    for i in range(print_num):
-        logger.info(f"print_num: {i}")
-
-    # retrieve list (from body only)
-    print_list = args.get_body("print_list", False, default=[])
-    logger.info(f"print_list: {print_list}")
-
-    # check a required param
-    req_param = args.get_body("req", True)
-    logger.info(f"req_param: {req_param}")
-
-    # check if metric should be logged
-    use_metric = args.get_body_query("use_metric", False, "bool", default=False)
-    if use_metric is True:
-        # FIXME: update this
-        logger.error("Not implemented yet!")
-
-    # check if event should be logged
-    use_event = args.get_body_query("use_event", False, "bool", default=False)
-    if use_event is True:
-        events.info("This is a test event")
-        events.info(
-            "This is a test event with a dict",
-            extra={"custom_dimensions": {"test": "dict"}},
-        )
 
     # generate sample logging messages
     use_logger = args.get_body_query("use_logger", False, "bool", default=False)
@@ -121,12 +75,8 @@ def main(
     payload = {
         "completed": True,
         "results": {
-            "body_param": body_param,
-            "query_param": query_param,
-            "use_exeption": use_exeption,
-            "print_num": print_num,
-            "print_list": print_list,
-            "req_param": req_param,
+            "use_logger": use_logger,
+            "use_tracer": use_tracer,
         },
         "logs": logs,
     }
