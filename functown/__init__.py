@@ -14,7 +14,8 @@ except Exception as ex:
     logging.error(f"Not all dependencies installed: {ex}")
 
 try:
-    from . import metrics
-    from .metrics import metrics_all, metrics_logger, metrics_events, metrics_tracer
+    from . import insights
+    from .insights import InsightsLogHandler, InsightsHandler
+    from .insights import metrics_all, metrics_logger, metrics_events, metrics_tracer
 except Exception as ex:
     logging.error(f"Unable to load metrics: {ex}")

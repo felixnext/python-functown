@@ -204,8 +204,8 @@ def test_error_decorator_response(caplog, exc, method, body, return_errors):
         assert caplog.records[pos].levelname == "WARNING"
         pos += 1
     if exc is not None:
-        if issubclass(exc, TokenError):
-            assert caplog.records[pos].message == "Token Error"
+        if issubclass(exc, RequestError):
+            assert caplog.records[pos].message == (exc.__name__)
             assert (
                 caplog.records[pos + 1].message
                 == f"Error ({str(exc)}): Error (500): Hello Exception (Obj: Hello Exception)"
@@ -220,7 +220,7 @@ def test_error_decorator_response(caplog, exc, method, body, return_errors):
         assert caplog.records[pos + 1].levelname == "ERROR"
         assert caplog.records[pos + 2].message == "Trace:"
         assert caplog.records[pos + 3].message == (
-            f"- error_decorator.py:103:{'143' if exc == TokenError else '170'}"
+            f"- error_decorator.py:122:{'163' if exc == TokenError else '172'}"
             " - Vars: ('self', 'func', 'args', 'kwargs', 'logs', 'logger', 'ex')"
         )
         assert (
