@@ -24,7 +24,6 @@ DEBUG = bool(strtobool(os.getenv("FUNC_DEBUG", "False")))
 INST_KEY = os.getenv("APP_INSIGHTS_KEY", None)
 
 
-@ft.clean
 @ft.ErrorHandler(
     debug=True,
     log_all_errors=DEBUG,
