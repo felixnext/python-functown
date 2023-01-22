@@ -21,7 +21,9 @@ class SampleDecorator(BaseDecorator):
 
     def run(self, func, *args, **kwargs):
         # check the exp level
-        logging.info(f"Lvl {self.level}: Running with param: {self.opt_param}")
+        logging.info(
+            f"Lvl {self.level}: Running with param: {self.opt_param} - outer: {self.is_first_decorator}"
+        )
         return func(*args, **kwargs)
 
 
@@ -53,7 +55,7 @@ def test_base_decorator(caplog):
 
     # validate the logs
     assert len(caplog.records) == 2
-    assert caplog.records[0].message == "Lvl 0: Running with param: test"
+    assert caplog.records[0].message == "Lvl 0: Running with param: test - outer: True"
     assert caplog.records[1].message == "Running test_func"
 
     @SampleDecorator(opt_param="var1")
@@ -67,8 +69,8 @@ def test_base_decorator(caplog):
 
     # validate the logs
     assert len(caplog.records) == 5
-    assert caplog.records[2].message == "Lvl 0: Running with param: var1"
-    assert caplog.records[3].message == "Lvl 1: Running with param: var2"
+    assert caplog.records[2].message == "Lvl 1: Running with param: var1 - outer: True"
+    assert caplog.records[3].message == "Lvl 0: Running with param: var2 - outer: False"
     assert caplog.records[4].message == "Running test_func: test test2"
 
 

@@ -151,7 +151,7 @@ class Metric:
         """
         # check the type
         if self.spec.mtype in (MetricType.GAUGE, MetricType.SUM):
-            return self.full_time_series[-1].value
+            return [self.full_time_series[-1].value]
 
         # retrieve the overall data
         return [dp.value for dp in self.full_time_series]

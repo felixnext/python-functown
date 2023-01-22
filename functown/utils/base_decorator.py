@@ -7,13 +7,8 @@ Copyright (c) 2023, Felix Geilert
 
 
 import logging
-from inspect import Signature, Parameter, signature
-from typing import Dict, Any, Union, List
-
-from uuid import uuid4 as uuid
-
-
-ADDRESS_PARAM = "_address"
+from inspect import Parameter, Signature, signature
+from typing import Dict, Any, Union, List, Callable, Tuple
 
 
 class BaseDecorator(object):
@@ -41,10 +36,7 @@ class BaseDecorator(object):
 
     # internal counter to keep track of the decorator level per function
     # NOTE: this has to be done on a class level, since each decorator is a new instance
-    __decorator_count: Dict[int, int] = {}
-    # last seen signature
-    # NOTE: this is used to clean up the outer function layer
-    __inner_signature: Dict[int, Signature] = {}
+    __decorator_count: Dict[int, Tuple[int, int]] = {}
 
     def __init__(
         self,
@@ -53,22 +45,66 @@ class BaseDecorator(object):
         mask_signature: bool = True,
         **kwargs,
     ):
-        # check if a function is passed (in case of @BaseDecorator)
+        # NOTE: this retrieves either only `func` (in non-init case) or decorator parameters
+        # check if a function is passed (in case of @BaseDecorator, i.e. non-init)
         self.func = func
-        self.is_outer = True
+        self._is_init = func is None
+
+        # create basic variables
         self.mask_signature = mask_signature
         self.added_kw = added_kw if added_kw else []
         self.__address = None
 
     @property
-    def level(self) -> int:
+    def level(self) -> Union[int, None]:
         """Returns the level of the decorator (i.e. how many other decorators have been called before).
 
         First decorator is level 0, second is level 1, etc.
         """
-        return self.__class__.__decorator_count[self.__address] - 1
+        tpl = self.__class__.__decorator_count.get(self.__address, None)
+        if tpl is None:
+            return None
+        return tpl[0] - 1
 
-    def _get(self, name: str, pos=0, *args, **kwargs) -> Union[Any, None]:
+    @property
+    def max_level(self) -> Union[int, None]:
+        # retrieve current data
+        if self.__address is None:
+            return None
+        tpl = self.__class__.__decorator_count.get(self.__address, None)
+        if tpl is None:
+            return None
+
+        # find the max level
+        found = True
+        addr = self.__address
+        while found:
+            found = False
+            for search_addr, search_tpl in self.__class__.__decorator_count.items():
+                if search_tpl[1] == addr:
+                    addr = search_addr
+                    tpl = search_tpl
+                    found = True
+                    break
+        return tpl[0] - 1
+
+    @property
+    def is_first_decorator(self) -> Union[bool, None]:
+        """Returns True if this is the first decorator in the stack (i.e. outermost)."""
+        if self.__address is None:
+            return None
+
+        for lvl, addr in self.__class__.__decorator_count.values():
+            if addr == self.__address:
+                return False
+        return True
+
+    @property
+    def is_last_decorator(self) -> bool:
+        """Returns True if this is the last decorator in the stack (i.e. innermost)."""
+        return not self.func.__qualname__.startswith("BaseDecorator")
+
+    def _get(self, name: str, pos: int = 0, *args, **kwargs) -> Union[Any, None]:
         """Retrieves an item either by name or by position."""
         if name in kwargs:
             return kwargs[name]
@@ -107,86 +143,70 @@ class BaseDecorator(object):
         """
         return func(*args, **kwargs)
 
-    def __increase_count(self, func, address):
+    def __increase_count(self, id_func, id_exec):
         """Retrieves the function id and increases the count of the decorator."""
-        # check if the function is already registered
-        if address not in self.__decorator_count:
-            self.__class__.__decorator_count[address] = 0
+        self.__address = id_exec
+        if self.is_last_decorator is True:
+            self.__class__.__decorator_count[self.__address] = (1, None)
+        else:
+            self.__class__.__decorator_count[self.__address] = (
+                self.__class__.__decorator_count[id_func][0] + 1,
+                id_func,
+            )
 
-        # increase the count
-        self.__class__.__decorator_count[address] += 1
-        if self.__class__.__decorator_count[address] > 1:
-            self.is_outer = False
+    def __modify_sig(self, sig: Signature, kws: List[str]) -> Signature:
+        """Removes the given keywords from the signature."""
+        kws = [kw for kw in kws if kw in sig.parameters]
+        if kws:
+            sig = sig.replace(
+                parameters=[p for p in sig.parameters.values() if p.name not in kws]
+            )
 
-        # update the inner signature
-        self.__class__.__inner_signature[address] = signature(func)
+        return sig
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Union[Any, Callable[[Any], Any]]:
         """Call the decorator.
 
         Note that if the function is not passed to the init (only for @BaseDecorator),
         This function is always passed here
+
+        This function has two call modes:
+        - non-init decorator: retrieves the call arguments from the inner function and
+            returns function result.
+        - init decorator: retrieves only the `func` as call argument and returns an
+            updated function object.
         """
-        # check if the function is passed directly
-        if self.func is None:
+        # check the case
+        if self._is_init is True:
             # retrieve the function from the arguments
-            self.func = args[0]
-
-            # check if self.func is part of another BaseDecorator call
-            is_decorator = self.func.__qualname__.startswith("BaseDecorator")
-
-            # FIXME: find solution for counting
-            if is_decorator == False:
-                # TODO:
-                pass
+            self.func = self._get("func", 0, *args, **kwargs)
 
             def execute(*args, **kwargs):
-                # check to get address from kwargs (or generate)
-                self.__address = kwargs.get(ADDRESS_PARAM, uuid().hex)
-                self.__increase_count(self.func, self.__address)
-
-                # check if self.func is a call on the BaseDecorator object
-                if is_decorator:
-                    kwargs[ADDRESS_PARAM] = self.__address
-                    return self.run(self.func, *args, **kwargs)
-
-                # check if the address should be removed
-                if ADDRESS_PARAM in kwargs:
-                    del kwargs[ADDRESS_PARAM]
                 return self.run(self.func, *args, **kwargs)
 
             # clean additional arguments from the signature return for the outer decorator
             if self.mask_signature:
-                sig = self.__class__.__inner_signature.get(self.__address)
+                execute.__signature__ = self.__modify_sig(
+                    signature(self.func), self.added_kw
+                )
 
-                # get all parameters to replace
-                kws = self.added_kw
+            # update the reference pointer
+            self.__increase_count(id(self.func), id(execute))
 
-                # if this is the outer decorator, add all keywords that start with * or **
-                if self.is_outer:
-                    # find all keywords that start with * or ** and add them to the list
-                    for kw in sig.parameters:
-                        p = sig.parameters[kw]
-                        if (
-                            p.kind == Parameter.VAR_KEYWORD
-                            or p.kind == Parameter.VAR_POSITIONAL
-                        ):
-                            kws.append(kw)
-
-                # replace the parameters
-                kws = [kw for kw in kws if kw in sig.parameters]
-                if kws:
-                    sig = sig.replace(
-                        parameters=[
-                            p for p in sig.parameters.values() if p.name not in kws
-                        ]
-                    )
-
-                # update the signature
-                execute.__signature__ = sig
+            # for the first decorator further modify function
+            if self.mask_signature is True and self.is_first_decorator is True:
+                sig = signature(execute)
+                kws = [
+                    kw
+                    for kw in sig.parameters
+                    if sig.parameters[kw].kind
+                    in [Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL]
+                ]
+                execute.__signature__ = self.__modify_sig(sig, kws)
 
             return execute
 
+        # --- code for non-init decorator ---
         # if the function is passed to the init, just run the function
         self.__increase_count(self.func)
         return self.run(self.func, *args, **kwargs)
