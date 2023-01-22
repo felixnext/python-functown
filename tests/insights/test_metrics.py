@@ -6,24 +6,32 @@ Copyright (c) 2023, Felix Geilert
 
 from opencensus.stats import stats as stats_module
 import pytest
+import time
 
-from functown.insights import Metric, MetricType, MetricSpec
+from functown.insights import Metric, MetricType, MetricSpec, MetricTimeValue
 
 
 @pytest.mark.parametrize(
-    "cols, mtype, dtype, start, values",
+    "cols, mtype, dtype, start, values, expected_data",
     [
         (
             ["col1"],
             MetricType.COUNTER,
             int,
             0,
-            [(1, None), (2, {"col1": "foo"}), (3, {"col1": "bar"})],
+            [
+                (1, None),
+                (2, {"col1": "foo"}),
+                (3, {"col1": "bar"}),
+                (4, None),
+                (5, {"col1": "foo"}),
+            ],
+            2,
         ),
     ],
     ids=["counter"],
 )
-def test_metric_spec(cols, mtype, dtype, start, values):
+def test_metric_spec(cols, mtype, dtype, start, values, expected_data):
     """Tests the MetricSpec class"""
     # define a spec
     spec = MetricSpec(
@@ -43,11 +51,28 @@ def test_metric_spec(cols, mtype, dtype, start, values):
     metric = Metric(spec, vm)
 
     # log values
+    unique_cols = set()
     for v, cols in values:
         metric.record(v, cols)
+        unique_cols.add(str(cols))
+        time.sleep(0.5)
 
     # retrieve data
-    data = metric.time_series
+    data = metric.current_data
 
     # assert data
-    assert len(data) == len(values)
+    if mtype == MetricType.COUNTER:
+        assert len(data) == len(unique_cols)
+    else:
+        assert len(data) == 1
+    for d in data:
+        assert type(d) == dtype
+    assert data[0] == expected_data
+
+    # retrieve time_series
+    ts = metric.full_time_series
+
+    # assert data
+    assert len(ts) == len(unique_cols)
+    for t in ts:
+        assert type(t) == MetricTimeValue

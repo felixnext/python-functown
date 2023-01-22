@@ -8,6 +8,8 @@ from distutils.util import strtobool
 import logging
 import json
 import os
+from random import random
+from time import time
 from typing import List, Dict
 
 import azure.functions as func
@@ -30,7 +32,36 @@ INST_KEY = os.getenv("APP_INSIGHTS_KEY", None)
     enable_logger=True,
     return_logs=True,
 )
-@ft.InsightsMetrics(instrumentation_key=INST_KEY, metrics=[ft.insights.MetricSpec()])
+@ft.InsightsMetrics(
+    instrumentation_key=INST_KEY,
+    metrics=[
+        ft.insights.MetricSpec(
+            name="counter",
+            description="A simple counter",
+            unit="count",
+            columns=["tag1", "tag2"],
+            mtype=ft.insights.MetricType.COUNTER,
+            dtype=int,
+        ),
+        ft.insights.MetricSpec(
+            name="gauge",
+            description="A simple gauge",
+            unit="count",
+            columns=["tag1", "tag4"],
+            mtype=ft.insights.MetricType.GAUGE,
+            dtype=float,
+        ),
+        ft.insights.MetricSpec(
+            name="sum",
+            description="summary of values",
+            unit="grams",
+            columns=["tag3", "tag5"],
+            mtype=ft.insights.MetricType.SUM,
+            dtype=float,
+            start_value=0.5,
+        ),
+    ],
+)
 def main(
     req: func.HttpRequest,
     logger: logging.Logger,
@@ -38,7 +69,7 @@ def main(
     metrics: Dict[str, ft.insights.Metric],
     **kwargs,
 ) -> func.HttpResponse:
-    logging.info("Python HTTP trigger function processed a request.")
+    logger.info("Python HTTP trigger function processed a request.")
 
     # create a logger (allow to return log as list)
     logger.info(f"Using functown v{ft.__version__}")
@@ -46,13 +77,47 @@ def main(
     # generate args parser
     args = ft.RequestArgHandler(req)
 
-    # FIXME: define a bunch of metric tasks
-    metrics["test_metric"].record(1)
+    # check if counter should be updated
+    cnum = args.get_body_query("counter", required=False, default=0, map_fct=int)
+    counter = metrics["counter"]
+    for i in range(cnum):
+        counter.record(1, tag1="a", tag2="b")
+        logger.info(f"{i} - counter: {counter.data}")
+
+    # check if gauge should be updated
+    gnum = args.get_body_query("gauge", required=False, default=0, map_fct=int)
+    gauge = metrics["gauge"]
+    for _ in range(gnum):
+        gauge.record(random(), tag1="a", tag4="b")
+        logger.info(f"gauge: {gauge.data}")
+        time.sleep(5)
+
+    # check if sum should be updated
+    snum = args.get_body_query("sum", required=False, default=0, map_fct=int)
+    summ = metrics["sum"]
+    for i in range(snum):
+        summ.record(i, tag3="a", tag5="b")
+        logger.info(f"{i} - sum: {summ.data}")
 
     # generate report
     payload = {
         "completed": True,
-        "results": {},
+        "results": {
+            "counter": {
+                "hits": cnum,
+                "data": counter.data,
+                "time_series": counter.time_series,
+            },
+            "gauge": {
+                "hits": gnum,
+                "data": gauge.data,
+            },
+            "sum": {
+                "hits": snum,
+                "data": summ.data,
+                "time_series": summ.time_series,
+            },
+        },
         "logs": logs,
     }
     return func.HttpResponse(
