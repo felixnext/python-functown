@@ -226,7 +226,7 @@ def test_error_decorator_response(caplog, exc, method, body, return_errors):
         )
         assert (
             caplog.records[pos + 4].message
-            == "- test_error_decorator.py:174:181 - Vars: ('req', 'params', 'kwargs')"
+            == "- test_error_decorator.py:175:182 - Vars: ('req', 'params', 'kwargs')"
         )
         pos += 4
 

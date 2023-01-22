@@ -1,8 +1,10 @@
 
 azure-functions>=1.10.1
-cryptography>=36.0.2
-python-jose>=3.3.0
 requests>=2.27.1
 
-# used for metrics (optional)
+# used for JWT
+cryptography>=36.0.2
+python-jose>=3.3.0
+
+# used for metrics
 opencensus-ext-azure>=1.1.8
