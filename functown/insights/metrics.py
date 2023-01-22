@@ -75,9 +75,11 @@ class Metric:
         self,
         spec: MetricSpec,
         vm: stats_module.ViewManager,
+        add_name_column: bool = True,
     ):
         # store the spec
         self.spec = spec
+        self.add_name_column = add_name_column
 
         # select the measure
         measure = {
@@ -97,13 +99,15 @@ class Metric:
         self.view = view_module.View(
             f"{spec.name}_view",
             spec.description,
-            spec.columns,
+            (["__name"] if add_name_column else []) + (spec.columns or []),
             self.measure,
             agg() if spec.start_value is None else agg(spec.start_value),
         )
         vm.register_view(self.view)
         self.map = stats_module.stats.stats_recorder.new_measurement_map()
         self.tag = tag_map_module.TagMap()
+        if add_name_column:
+            self.tag.insert("__name", spec.name)
 
     def add_default_column(self, key: str, value: Any):
         """Adds a default tag to the metric.
@@ -123,6 +127,7 @@ class Metric:
         tag_map = self.tag
         if columns is not None:
             tag_map = tag_map_module.TagMap()
+            tag_map.insert("__name", self.spec.name)
             for key, cval in columns.items():
                 if key not in self.spec.columns:
                     logging.warning(
@@ -198,11 +203,15 @@ class Metric:
         # NOTE: each new tag configuration will create a new time-series
         series: List[OCTimeSeries] = data[0].time_series
 
-        # combine the time series and map them
+        # filter timeseries (based on label_values)
         if columns is not None:
-            # filter timeseries (based on label_values)
-            vals = [columns.get(col, None) for col in self.spec.columns]
-            series = [s for s in series if s.label_values == vals]
+            vals = ([self.spec.name] if self.add_name_column else []) + [
+                columns.get(col, None) for col in self.spec.columns
+            ]
+            series = [s for s in series if [lv.value for lv in s.label_values] == vals]
+        elif self.add_name_column:
+            # in any case filter for the name
+            series = [s for s in series if s.label_values[0].value == self.spec.name]
 
         # filter and convert the data
         items = []

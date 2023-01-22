@@ -186,27 +186,21 @@ class BaseDecorator(object):
 
             # clean additional arguments from the signature return for the outer decorator
             if self.mask_signature:
-                execute.__signature__ = self.__modify_sig(
-                    signature(self.func), self.added_kw
-                )
-
-            # update the reference pointer
-            self.__increase_count(id(self.func), id(execute))
-
-            # for the first decorator further modify function
-            if self.mask_signature is True and self.is_first_decorator is True:
-                sig = signature(execute)
+                sig = signature(self.func)
                 kws = [
                     kw
                     for kw in sig.parameters
                     if sig.parameters[kw].kind
                     in [Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL]
                 ]
-                execute.__signature__ = self.__modify_sig(sig, kws)
+                execute.__signature__ = self.__modify_sig(sig, self.added_kw + kws)
+
+            # update the reference pointer
+            self.__increase_count(id(self.func), id(execute))
 
             return execute
 
         # --- code for non-init decorator ---
         # if the function is passed to the init, just run the function
-        self.__increase_count(self.func)
+        self.__increase_count(id(self.func), id(self))
         return self.run(self.func, *args, **kwargs)

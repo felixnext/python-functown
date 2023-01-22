@@ -259,5 +259,14 @@ You can verify that the new version of the code was picked up by the first log s
 
 * The `@handle_error` decorator returns additional information to be used in the development process. This can also expose infrormation to attackers, so use responsibly (i.e. make sure to disable for production environments).
 
+If you want to develop on the library or execute tests, you can install the conda environment:
+
+```bash
+# remove old:
+# conda env remove -n functown
+conda env create -f conda-dev.yml
+conda activate functown
+```
+
 > ‼️ If you find this library helpful or have suggestions please let me know.
 Also any contributions are welcome! ‼️
