@@ -77,12 +77,18 @@ def main(
     # generate args parser
     args = ft.RequestArgHandler(req)
 
+    sleep_time = args.get_body_query("sleep", required=False, default=0, map_fct=float)
+    logger.info(f"sleep time (sec): {sleep_time}")
+
     # check if counter should be updated
     cnum = args.get_body_query("counter", required=False, default=0, map_fct=int)
     counter = metrics["counter"]
     for i in range(cnum):
         counter.record(1, tag1="a", tag2="b")
         logger.info(f"{i} - counter: {counter.data}")
+        # check for sleep
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
     # check if gauge should be updated
     gnum = args.get_body_query("gauge", required=False, default=0, map_fct=int)
@@ -90,7 +96,9 @@ def main(
     for _ in range(gnum):
         gauge.record(random(), tag1="a", tag4="b")
         logger.info(f"gauge: {gauge.data}")
-        time.sleep(5)
+        # check for sleep
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
     # check if sum should be updated
     snum = args.get_body_query("sum", required=False, default=0, map_fct=int)
@@ -98,15 +106,19 @@ def main(
     for i in range(snum):
         summ.record(i, tag3="a", tag5="b")
         logger.info(f"{i} - sum: {summ.data}")
+        # check for sleep
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
     # generate report
     payload = {
         "completed": True,
         "results": {
+            "sleep_sec": sleep_time,
             "counter": {
                 "hits": cnum,
-                "data": counter.data,
-                "time_series": counter.time_series,
+                "data": counter.current_data,
+                "time_series": counter.full_time_series,
             },
             "gauge": {
                 "hits": gnum,
@@ -114,8 +126,8 @@ def main(
             },
             "sum": {
                 "hits": snum,
-                "data": summ.data,
-                "time_series": summ.time_series,
+                "data": summ.current_data,
+                "time_series": summ.full_time_series,
             },
         },
         "logs": logs,

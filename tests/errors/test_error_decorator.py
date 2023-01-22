@@ -128,8 +128,8 @@ def test_error_decorator_logs(caplog):
     # assert the log
     assert len(caplog.records) == 7
     assert caplog.records[4].message == (
-        "It is advised to use the ErrorHandler decorator as the first decorator, "
-        "it is currently at the 1 level. (Should be 0)"
+        "It is advised to use ErrorHandler as the first decorator, "
+        "it is currently at the 0 level. (Should be 1)"
     )
     assert caplog.records[4].levelname == "WARNING"
     assert caplog.records[5].message == "Hello World 3"

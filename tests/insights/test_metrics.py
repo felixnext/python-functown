@@ -28,8 +28,22 @@ from functown.insights import Metric, MetricType, MetricSpec, MetricTimeValue
             ],
             2,
         ),
+        (
+            ["col1"],
+            MetricType.GAUGE,
+            float,
+            0.5,
+            [
+                (1.0, {"col1": "foo"}),
+                (2.0, {"col1": "foo"}),
+                (3.0, {"col1": "foo"}),
+                (4.0, {"col1": "foo"}),
+                (5.0, {"col1": "foo"}),
+            ],
+            5.0,
+        ),
     ],
-    ids=["counter"],
+    ids=["counter", "gauge"],
 )
 def test_metric_spec(cols, mtype, dtype, start, values, expected_data):
     """Tests the MetricSpec class"""

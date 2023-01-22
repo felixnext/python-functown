@@ -148,11 +148,11 @@ class ErrorHandler(BaseDecorator):
             logger = logging
 
         # check if outermost
-        if self.is_outer is False:
+        if self.is_first_decorator is False:
             logger.warning(
                 "It is advised to use ErrorHandler as the first decorator, "
-                f"it is current at the {self.__class__.__decorator_count} level."
-                "(Should be 0)"
+                f"it is currently at the {self.level} level. "
+                f"(Should be {self.max_level})"
             )
 
         # execute main loop
