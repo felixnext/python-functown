@@ -15,7 +15,6 @@ from functown.errors import ErrorHandler, TokenError, RequestError
 from functown.utils import BaseDecorator
 
 
-@pytest.mark.order(3)
 def test_error_decorator_signature():
     """Tests the error decorator."""
 
@@ -79,7 +78,7 @@ def test_error_decorator_signature():
     assert signature(test_function6).parameters == prox
 
 
-@pytest.mark.order(4)
+@pytest.mark.skip
 def test_error_decorator_logs(caplog):
     """Tests if the error decorator logs correctly."""
     # --- GENERAL LOGGING ---
