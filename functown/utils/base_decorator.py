@@ -164,6 +164,10 @@ class BaseDecorator(object):
 
         return sig
 
+    def __id(self, func):
+        """Returns the id of the function."""
+        return id(func) + func.__hash__()
+
     def __call__(self, *args, **kwargs) -> Union[Any, Callable[[Any], Any]]:
         """Call the decorator.
 
@@ -196,11 +200,11 @@ class BaseDecorator(object):
                 execute.__signature__ = self.__modify_sig(sig, self.added_kw + kws)
 
             # update the reference pointer
-            self.__increase_count(id(self.func), id(execute))
+            self.__increase_count(self.__id(self.func), self.__id(execute))
 
             return execute
 
         # --- code for non-init decorator ---
         # if the function is passed to the init, just run the function
-        self.__increase_count(id(self.func), id(self))
+        self.__increase_count(self.__id(self.func), self.__id(self))
         return self.run(self.func, *args, **kwargs)

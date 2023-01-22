@@ -6,7 +6,6 @@ try:
     from . import errors
     from .errors import ErrorHandler
     from .args import RequestArgHandler
-    from .utils.clean_decorator import clean
     from . import utils
 
     from . import auth

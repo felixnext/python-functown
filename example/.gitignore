@@ -137,3 +137,4 @@ __azurite_db*__.json
 # ignore local artifacts
 config.json
 functown_local
+functown
