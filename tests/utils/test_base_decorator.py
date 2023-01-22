@@ -10,6 +10,7 @@ from inspect import signature, Parameter
 from types import MappingProxyType
 
 from azure.functions import HttpRequest
+import pytest
 
 from functown.utils import BaseDecorator
 
@@ -27,6 +28,7 @@ class SampleDecorator(BaseDecorator):
         return func(*args, **kwargs)
 
 
+@pytest.mark.order(1)
 def test_base_decorator(caplog):
     """Test the base decorator."""
 
@@ -74,6 +76,7 @@ def test_base_decorator(caplog):
     assert caplog.records[4].message == "Running test_func: test test2"
 
 
+@pytest.mark.order(2)
 def test_base_decorator_signature():
     """Tests the error decorator."""
 
