@@ -79,6 +79,7 @@ def test_error_decorator_signature():
     assert signature(test_function6).parameters == prox
 
 
+@pytest.mark.order(4)
 def test_error_decorator_logs(caplog):
     """Tests if the error decorator logs correctly."""
     # --- GENERAL LOGGING ---
