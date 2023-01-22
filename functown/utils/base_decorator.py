@@ -166,7 +166,7 @@ class BaseDecorator(object):
 
     def __id(self, func):
         """Returns the id of the function."""
-        return id(func) + func.__hash__()
+        return id(func)
 
     def __call__(self, *args, **kwargs) -> Union[Any, Callable[[Any], Any]]:
         """Call the decorator.
