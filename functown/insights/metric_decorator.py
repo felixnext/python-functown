@@ -46,6 +46,8 @@ class InsightsMetrics(InsightsDecorator):
         metrics (List[MetricSpec]): A list of metrics to be logged.
         enable_perf_metrics (bool): Whether to enable performance metrics to be send
             to Application Insights. Defaults to `True`.
+        enable_name_column (bool): Whether to enable the `__name` column is
+            automatically added to the metrics. Defaults to `False`.
     """
 
     def __init__(
@@ -54,6 +56,7 @@ class InsightsMetrics(InsightsDecorator):
         metrics: List[MetricSpec],
         callback: Callable[[metrics_exporter.Envelope], None] = None,
         enable_perf_metrics: bool = True,
+        enable_name_column: bool = False,
         **kwargs,
     ):
         super().__init__(instrumentation_key, kwargs=["metrics"], **kwargs)
@@ -61,6 +64,7 @@ class InsightsMetrics(InsightsDecorator):
         self.metric_specs = metrics
         self.callback = callback
         self.perf_metrics = enable_perf_metrics
+        self.enable_name_column = enable_name_column
 
     def run(self, func, *args, **kwargs):
         try:
@@ -68,7 +72,12 @@ class InsightsMetrics(InsightsDecorator):
             vm = stats_module.stats.view_manager
 
             # generate metrics
-            metrics = dict([(m.name, Metric(m, vm)) for m in self.metric_specs])
+            metrics = dict(
+                [
+                    (m.name, Metric(m, vm, self.enable_name_column))
+                    for m in self.metric_specs
+                ]
+            )
             kwargs["metrics"] = metrics
 
             # register exporter for the metrics
