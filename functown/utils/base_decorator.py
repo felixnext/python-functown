@@ -203,6 +203,7 @@ class BaseDecorator(object):
                 execute.__signature__ = self.__modify_sig(sig, self.added_kw + kws)
 
             # update the reference pointer
+            # TODO: refactor this code
             base_id = None
             self.__address = id(self)
             level = 0
@@ -214,6 +215,7 @@ class BaseDecorator(object):
                     cl.cell_contents
                     for cl in self.func.__closure__
                     if cl.cell_contents is not None
+                    and issubclass(cl.cell_contents.__class__, BaseDecorator)
                 ]
                 if len(obj) == 0:
                     base_id = id(self.func)
