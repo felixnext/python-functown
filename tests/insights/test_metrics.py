@@ -4,21 +4,40 @@ Copyright (c) 2023, Felix Geilert
 """
 
 
-from opencensus.stats import stats as stats_module
 import pytest
 import time
 
-from functown.insights import Metric, MetricType, MetricSpec, MetricTimeValue
+from functown.insights import (
+    MetricType,
+    MetricSpec,
+    MetricTimeValue,
+    MetricHandler,
+)
 
 
-# create a fixture for the view manager
-@pytest.fixture(scope="session", autouse=True, name="view_manager")
-def view_manager():
-    """Creates a view manager for the tests"""
-    stats = stats_module.stats
-    view_manager = stats.view_manager
-    yield view_manager
-    view_manager.clear()
+def test_handler():
+    """Test the MetricHandler class."""
+    # assert creation
+    handler = MetricHandler()
+    assert handler is not None
+
+    # assert singleton
+    handler2 = MetricHandler()
+    assert handler2 == handler
+
+    # create a metric
+    spec = MetricSpec(
+        "test_metric", "some metric", "units", ["col1", "col2"], MetricType.COUNTER, int
+    )
+    handler.create_metrics([spec])
+
+    # assert access types
+    m = handler.get_metric("test_metric")
+    assert m.spec == spec
+    m2 = handler["test_metric"]
+    assert m2 == m
+    m3 = handler.test_metric
+    assert m3 == m
 
 
 @pytest.mark.parametrize(
@@ -50,18 +69,29 @@ def view_manager():
                 (2.0, {"col2": "foo"}),
                 (3.0, {"col2": "foo"}),
                 (4.0, {"col2": "foo"}),
-                (5.0, {"col2": "foo"}),
+                (5.5, {"col2": "foo"}),
             ],
-            5.0,
+            5.5,
+        ),
+        (
+            "sum_metric",
+            ["col2"],
+            MetricType.SUM,
+            float,
+            3.0,
+            [
+                (1.0, {"col2": "bar"}),
+                (0.5, {"col2": "bar"}),
+                (3.0, {"col2": "bar"}),
+                (4.0, {"col2": "bar"}),
+                (5.5, {"col2": "bar"}),
+            ],
+            17.0,
         ),
     ],
-    ids=["counter", "gauge"],
+    ids=["counter", "gauge", "sum"],
 )
-# TODO: fix this test
-@pytest.mark.skip
-def test_metric_counter(
-    name, cols, mtype, dtype, start, values, expected_data, view_manager
-):
+def test_metric_counter(name, cols, mtype, dtype, start, values, expected_data):
     """Tests the MetricSpec class"""
     # define a spec
     spec = MetricSpec(
@@ -75,7 +105,9 @@ def test_metric_counter(
     )
 
     # create a metric
-    metric = Metric(spec, view_manager)
+    handler = MetricHandler()
+    handler.create_metrics([spec])
+    metric = handler[name]
 
     # log values
     unique_cols = set()
@@ -99,5 +131,40 @@ def test_metric_counter(
 
     # assert data
     assert len(ts) == len(unique_cols)
-    for t in ts:
-        assert type(t) == MetricTimeValue
+    _, tags = values[-1]
+    t = ts[-1]
+    assert type(t) == MetricTimeValue
+    # assert the tags
+    assert t.columns["__name"] == name
+    if tags and len(unique_cols) == 1:
+        for k, v in tags.items():
+            assert t.columns[k] == v
+
+
+def test_metric_multi():
+    """Tests the MetricSpec class"""
+    # define a spec
+    specs = [
+        MetricSpec(
+            name="counter_metric",
+            description="first metric",
+            unit="count",
+            columns=["col1"],
+            mtype=MetricType.COUNTER,
+            dtype=int,
+        ),
+        MetricSpec(
+            name="gauge_metric",
+            description="first metric",
+            unit="count",
+            columns=["col1"],
+            mtype=MetricType.COUNTER,
+            dtype=int,
+        ),
+    ]
+
+    # create a metric
+    handler = MetricHandler()
+    handler.create_metrics(specs)
+    m1 = handler["counter_metric"]
+    m2 = handler.gauge_metric

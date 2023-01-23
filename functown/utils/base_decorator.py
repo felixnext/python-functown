@@ -8,6 +8,7 @@ Copyright (c) 2023, Felix Geilert
 
 import logging
 from inspect import Parameter, Signature, signature
+import traceback
 from typing import Dict, Any, Union, List, Callable, Tuple
 
 
@@ -166,6 +167,8 @@ class BaseDecorator(object):
 
     def __id(self, func):
         """Returns the id of the function."""
+        # FIXME: look at the callstack?
+        tb = traceback.extract_stack()
         return id(func)
 
     def __call__(self, *args, **kwargs) -> Union[Any, Callable[[Any], Any]]:

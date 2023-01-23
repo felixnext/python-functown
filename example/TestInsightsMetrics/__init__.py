@@ -66,7 +66,7 @@ def main(
     req: func.HttpRequest,
     logger: logging.Logger,
     logs: List[str],
-    metrics: Dict[str, ft.insights.Metric],
+    metrics: ft.insights.MetricHandler,
     **kwargs,
 ) -> func.HttpResponse:
     logger.info("Python HTTP trigger function processed a request.")
@@ -82,7 +82,7 @@ def main(
 
     # check if counter should be updated
     cnum = args.get_body_query("counter", required=False, default=0, map_fct=int)
-    counter = metrics["counter"]
+    counter = metrics["counter"]  # access via getitem
     for i in range(cnum):
         counter.record(1, tag1="a", tag2="b")
         logger.info(f"{i} - counter: {counter.data}")
@@ -92,7 +92,7 @@ def main(
 
     # check if gauge should be updated
     gnum = args.get_body_query("gauge", required=False, default=0, map_fct=int)
-    gauge = metrics["gauge"]
+    gauge = metrics.gauge  # access via attribute
     for _ in range(gnum):
         gauge.record(random(), tag1="a", tag4="b")
         logger.info(f"gauge: {gauge.data}")
@@ -102,7 +102,7 @@ def main(
 
     # check if sum should be updated
     snum = args.get_body_query("sum", required=False, default=0, map_fct=int)
-    summ = metrics["sum"]
+    summ = metrics.get_metric("sum")  # access via get_metric method
     for i in range(snum):
         summ.record(i, tag3="a", tag5="b")
         logger.info(f"{i} - sum: {summ.data}")

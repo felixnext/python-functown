@@ -7,7 +7,7 @@ from .callbacks import (
 
 from .base import InsightsDecorator
 
-from .metrics import MetricType, Metric, MetricSpec, MetricTimeValue
+from .metrics import MetricType, Metric, MetricSpec, MetricTimeValue, MetricHandler
 
 from .logger_decorator import InsightsLogs
 from .event_decorator import InsightsEvents

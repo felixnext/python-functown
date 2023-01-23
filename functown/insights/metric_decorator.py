@@ -30,10 +30,9 @@ import logging
 from typing import List, Callable
 
 from opencensus.ext.azure import metrics_exporter
-from opencensus.stats import stats as stats_module
 
 from .base import InsightsDecorator
-from .metrics import MetricSpec, Metric
+from .metrics import MetricHandler, MetricSpec
 
 
 class InsightsMetrics(InsightsDecorator):
@@ -68,26 +67,17 @@ class InsightsMetrics(InsightsDecorator):
 
     def run(self, func, *args, **kwargs):
         try:
-            # define the view manager
-            vm = stats_module.stats.view_manager
-
-            # generate metrics
-            metrics = dict(
-                [
-                    (m.name, Metric(m, vm, self.enable_name_column))
-                    for m in self.metric_specs
-                ]
-            )
-            kwargs["metrics"] = metrics
+            # generate the handler
+            handler = MetricHandler(self.enable_name_column)
+            handler.create_metrics(self.metric_specs)
+            kwargs["metrics"] = handler
 
             # register exporter for the metrics
-            exporter = metrics_exporter.new_metrics_exporter(
+            handler.connect_insights(
+                self.instrumentation_key,
+                self.callback,
                 enable_standard_metrics=self.perf_metrics,
-                connection_string=f"InstrumentationKey={self.instrumentation_key}",
             )
-            if self.callback is not None:
-                exporter.add_telemetry_processor(self.callback)
-            vm.register_exporter(exporter)
         except Exception as ex:
             logging.error(f"Failed to create Metrics Logger: {ex}")
             raise ex
