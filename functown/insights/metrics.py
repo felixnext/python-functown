@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 import logging
-import inspect
 from typing import Dict, Union, Type, List, Any, Callable
 
 from opencensus.ext.azure import metrics_exporter
@@ -210,6 +209,7 @@ class Metric:
         data: List[OCMetric] = list(self.map.measure_to_view_map.get_metrics(end))
         # retrieve the time series data
         # NOTE: each new tag configuration will create a new time-series
+        # FIXME: this might be the problem (multiple data points here from different measurements)
         series: List[OCTimeSeries] = data[0].time_series
 
         # filter timeseries (based on label_values)
@@ -253,6 +253,7 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
 
         # create opencensus data
         self._vm = stats_module.stats.view_manager
+        # TODO: figure out how to handle different maps for different namespaces?
         self._map = stats_module.stats.stats_recorder.new_measurement_map()
         self._exporter = None
 

@@ -168,3 +168,5 @@ def test_metric_multi():
     handler.create_metrics(specs)
     m1 = handler["counter_metric"]
     m2 = handler.gauge_metric
+
+    # FIXME: implement full unit test here
