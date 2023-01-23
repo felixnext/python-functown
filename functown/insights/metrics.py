@@ -3,6 +3,9 @@
 Note that the time_series returned from OpenCensus internally do not always reflect
 the correct timestamps, but are bucketed. Therefore items can cluster together.
 
+This code should provide the primary abstraction interface for OpenCensus API.
+No code outside this file should need to touch the opencensus API directly.
+
 Copyright (c) 2023, Felix Geilert
 """
 
@@ -11,8 +14,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 import logging
-from typing import Dict, Union, Type, List, Any
+import inspect
+from typing import Dict, Union, Type, List, Any, Callable
 
+from opencensus.ext.azure import metrics_exporter
+from opencensus.stats.measurement_map import MeasurementMap
 from opencensus.stats import aggregation as aggregation_module
 from opencensus.stats import measure as measure_module
 from opencensus.stats import stats as stats_module
@@ -20,6 +26,8 @@ from opencensus.stats import view as view_module
 from opencensus.tags import tag_map as tag_map_module
 from opencensus.metrics.export.metric import Metric as OCMetric
 from opencensus.metrics.export.time_series import TimeSeries as OCTimeSeries
+
+from functown.utils.metaclasses import ThreadSafeSingleton
 
 
 class MetricType(Enum):
@@ -71,14 +79,18 @@ class MetricTimeValue:
 class Metric:
     """Handler class for metrics that allow to record values"""
 
+    _NAME_COL = "__name"
+
     def __init__(
         self,
         spec: MetricSpec,
         vm: stats_module.ViewManager,
+        map: MeasurementMap,
         add_name_column: bool = True,
     ):
         # store the spec
         self.spec = spec
+        self.map = map
         self.add_name_column = add_name_column
 
         # select the measure
@@ -104,10 +116,6 @@ class Metric:
             agg() if spec.start_value is None else agg(spec.start_value),
         )
         vm.register_view(self.view)
-        self.map = stats_module.stats.stats_recorder.new_measurement_map()
-        self.tag = tag_map_module.TagMap()
-        if add_name_column:
-            self.tag.insert("__name", spec.name)
 
     def add_default_column(self, key: str, value: Any):
         """Adds a default tag to the metric.
@@ -124,17 +132,18 @@ class Metric:
     def record(self, value: Union[float, int], columns: Dict[str, Any] = None):
         """Records a value for the metric."""
         # generate the tags
-        tag_map = self.tag
+        # FIXME: find solution for record and handle tags
+        """tag_map = self.tag
         if columns is not None:
             tag_map = tag_map_module.TagMap()
-            tag_map.insert("__name", self.spec.name)
+            tag_map.insert(self._NAME_COL, self.spec.name)
             for key, cval in columns.items():
                 if key not in self.spec.columns:
                     logging.warning(
                         f"Key {key} is not a valid column for this metric. Ignoring."
                     )
                     continue
-                tag_map.insert(key, cval)
+                tag_map.insert(key, cval)"""
 
         # check if value is float, int or str
         if isinstance(value, float):
@@ -143,7 +152,7 @@ class Metric:
             self.map.measure_int_put(self.measure, value)
         else:
             raise ValueError(f"Value {value} is not a valid value.")
-        self.map.record(tag_map)
+        # self.map.record(tag_map)
 
     @property
     def current_data(self) -> List[Union[int, float]]:
@@ -218,7 +227,11 @@ class Metric:
         for serie in series:
             vals = {
                 col: val.value
-                for col, val in zip(self.spec.columns, serie.label_values)
+                for col, val in zip(
+                    ([self._NAME_COL] if self.add_name_column is True else [])
+                    + self.spec.columns,
+                    serie.label_values,
+                )
             }
             items += [
                 MetricTimeValue(p.value.value, p.timestamp, vals)
@@ -229,3 +242,107 @@ class Metric:
         # sort data by timestamp
         items.sort(key=lambda x: x.timestamp)
         return items
+
+
+class MetricHandler(metaclass=ThreadSafeSingleton):
+    def __init__(self, add_name_column: bool = True):
+        # create internal data
+        self._metrics: Dict[str, Metric] = {}
+        self._enable_standard_metrics = True
+        self._add_name_column = add_name_column
+
+        # create opencensus data
+        self._vm = stats_module.stats.view_manager
+        self._map = stats_module.stats.stats_recorder.new_measurement_map()
+        self._exporter = None
+
+    def __getattribute__(self, name):
+        try:
+            return super().__getattribute__(name)
+        except AttributeError:
+            try:
+                return self._metrics[name]
+            except KeyError:
+                raise AttributeError(name)
+
+    def __getitem__(self, key):
+        # allow ["metric"] retrieval
+        return self.get_metric(key)
+
+    def get_metric(self, name: str) -> Union[Metric, None]:
+        """Returns the metric with the given name.
+
+        Args:
+            name (str): The name of the metric.
+
+        Returns:
+            Metric: The metric.
+        """
+        return self._metrics.get(name, None)
+
+    def create_metrics(self, specs: List[MetricSpec], hard_fail: bool = True) -> bool:
+        """Creates a list of metrics based on the specifications.
+
+        Args:
+            specs (List[MetricSpec]): The specifications to create the metrics for.
+            hard_fail (bool): Whether to hard fail on a namespace conflict.
+                Defaults to True.
+
+        Returns:
+            bool: Whether the metrics were created successfully.
+        """
+        # check if metric names are valid
+        for spec in specs:
+            # check for error
+            if spec.name in self._metrics or spec.name in self.__dict__:
+                if hard_fail:
+                    raise ValueError(
+                        f"Metric {spec.name} generates a namespace conflict."
+                    )
+                return False
+
+        # FIXME: handle different tagmaps
+
+        # only create metrics if all are valid
+        for spec in specs:
+            self._metrics[spec.name] = Metric(
+                spec, self._vm, self._map, self._add_name_column
+            )
+
+        return True
+
+    @property
+    def is_insights_enabled(self) -> bool:
+        """Returns whether the exporter is connected to Application Insights."""
+        return self._exporter is not None
+
+    def connect_insights(
+        self,
+        instrumentation_key: str,
+        callback: Callable[[metrics_exporter.Envelope], bool],
+        enable_standard_metrics: bool = None,
+    ):
+        """Connects the metrics to Azure Insights.
+
+        Args:
+            instrumentation_key (str): The instrumentation key to connect to.
+            enable_standard_metrics (bool, optional): Whether to enable standard metrics.
+                Defaults to None.
+        """
+        # update the metrics
+        metrics = enable_standard_metrics
+        if metrics is None:
+            metrics = self._enable_standard_metrics
+        self._enable_standard_metrics = metrics
+
+        # generate exporter
+        self._exporter = metrics_exporter.new_metrics_exporter(
+            enable_standard_metrics=self.perf_metrics,
+            connection_string=f"InstrumentationKey={instrumentation_key}",
+        )
+
+        # check for filter
+        if callback is not None:
+            self._exporter.add_telemetry_processor(callback)
+
+        self._vm.register_exporter(self._exporter)
