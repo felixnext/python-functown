@@ -77,17 +77,12 @@ class BaseDecorator(object):
             return None
 
         # find the max level
-        found = True
-        addr = self.__address
-        while found:
-            found = False
-            for search_addr, search_tpl in self.__class__.__decorator_count.items():
-                if search_tpl[1] == addr:
-                    addr = search_addr
-                    tpl = search_tpl
-                    found = True
-                    break
-        return tpl[0] - 1
+        base_id = tpl[1]
+        max_lvl = tpl[0]
+        for lvl, ref_id in self.__class__.__decorator_count.values():
+            if ref_id == base_id and lvl > max_lvl:
+                max_lvl = lvl
+        return max_lvl - 1
 
     @property
     def is_first_decorator(self) -> Union[bool, None]:
@@ -95,15 +90,19 @@ class BaseDecorator(object):
         if self.__address is None:
             return None
 
+        # get current data
+        cur_lvl, base_id = self.__class__.__decorator_count[self.__address]
+
+        # validate if higher data
         for lvl, addr in self.__class__.__decorator_count.values():
-            if addr == self.__address:
+            if addr == base_id and lvl > cur_lvl:
                 return False
         return True
 
     @property
     def is_last_decorator(self) -> bool:
         """Returns True if this is the last decorator in the stack (i.e. innermost)."""
-        return not self.func.__qualname__.startswith("BaseDecorator")
+        return self.level == 0
 
     def _get(self, name: str, pos: int = 0, *args, **kwargs) -> Union[Any, None]:
         """Retrieves an item either by name or by position."""
@@ -166,9 +165,10 @@ class BaseDecorator(object):
         return sig
 
     def __id(self, func):
-        """Returns the id of the function."""
-        # FIXME: look at the callstack?
-        tb = traceback.extract_stack()
+        """Returns the id of the function.
+
+        self.level = len([member for member in inspect.getmembers(self.func) if inspect.isfunction(member[1]) and member[1].__name__ == "wrapped"])
+        """
         return id(func)
 
     def __call__(self, *args, **kwargs) -> Union[Any, Callable[[Any], Any]]:
@@ -203,7 +203,30 @@ class BaseDecorator(object):
                 execute.__signature__ = self.__modify_sig(sig, self.added_kw + kws)
 
             # update the reference pointer
-            self.__increase_count(self.__id(self.func), self.__id(execute))
+            base_id = None
+            self.__address = id(self)
+            level = 0
+            if self.func.__closure__ is None:
+                base_id = id(self.func)
+                self.__class__.__decorator_count[base_id] = (level, None)
+            else:
+                obj = [
+                    cl.cell_contents
+                    for cl in self.func.__closure__
+                    if cl.cell_contents is not None
+                ]
+                if len(obj) == 0:
+                    base_id = id(self.func)
+                    self.__class__.__decorator_count[base_id] = (level, None)
+                else:
+                    ref_id = id(obj[0])
+                    if ref_id not in self.__class__.__decorator_count:
+                        base_id = id(self.func)
+                        self.__class__.__decorator_count[base_id] = (level, None)
+                    else:
+                        level, base_id = self.__class__.__decorator_count[ref_id]
+            self.__class__.__decorator_count[self.__address] = (level + 1, base_id)
+            # self.__increase_count(self.__id(self.func), self.__id(execute))
 
             return execute
 
