@@ -27,6 +27,8 @@ from opencensus.trace.tracer import Tracer
 
 from .base import InsightsDecorator
 
+TracerObject = Tracer
+
 
 class InsightsTracer(InsightsDecorator):
     """Decorator that provides a sending interface to the Application Insights.
