@@ -67,12 +67,14 @@ class InsightsEvents(InsightsDecorator):
     def run(self, func, *args, **kwargs):
         try:
             events = self._create_logger(self.clean_logger, "events", *args, **kwargs)
-            event_handler = AzureEventHandler(
-                connection_string=f"InstrumentationKey={self.instrumentation_key}"
-            )
-            if self.callback is not None:
-                event_handler.add_telemetry_processor(self.callback)
-            events.addHandler(event_handler)
+
+            if self.instrumentation_key is not None:
+                event_handler = AzureEventHandler(
+                    connection_string=f"InstrumentationKey={self.instrumentation_key}"
+                )
+                if self.callback is not None:
+                    event_handler.add_telemetry_processor(self.callback)
+                events.addHandler(event_handler)
             kwargs["events"] = events
         except Exception as ex:
             logging.error(f"Failed to create Insights Events Logger: {ex}")
