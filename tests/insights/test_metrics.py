@@ -91,7 +91,6 @@ def test_handler():
     ],
     ids=["counter", "gauge", "sum"],
 )
-@pytest.mark.skip
 def test_metric_counter(name, cols, mtype, dtype, start, values, expected_data):
     """Tests the MetricSpec class"""
     # define a spec
@@ -142,7 +141,6 @@ def test_metric_counter(name, cols, mtype, dtype, start, values, expected_data):
             assert t.columns[k] == v
 
 
-@pytest.mark.skip
 def test_metric_multi():
     """Tests the MetricSpec class"""
     # define a spec

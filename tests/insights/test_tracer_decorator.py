@@ -1,4 +1,4 @@
-"""Unit Tests for the insights.InsightsLogs decorator
+"""Unit Tests for the insights.InsightsTracer decorator
 
 Copyright (c) 2023, Felix Geilert
 """

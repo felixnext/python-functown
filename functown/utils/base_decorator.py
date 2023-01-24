@@ -108,11 +108,11 @@ class BaseDecorator(object):
         """Returns True if this is the last decorator in the stack (i.e. innermost)."""
         return self.level == 0
 
-    def _get(self, name: str, pos: int = 0, *args, **kwargs) -> Union[Any, None]:
+    def _get(self, name: str, pos: int = None, *args, **kwargs) -> Union[Any, None]:
         """Retrieves an item either by name or by position."""
         if name in kwargs:
             return kwargs[name]
-        if len(args) > pos:
+        if pos is not None and len(args) > pos:
             return args[pos]
         return None
 
@@ -130,7 +130,7 @@ class BaseDecorator(object):
         Returns:
             logging.Logger: The logger.
         """
-        logger = self._get(name, *args, **kwargs)
+        logger = self._get(name, None, *args, **kwargs)
         if logger is None or force_clean is True:
             name = self.__class__.__name__
             logging.debug(f"Creating logger for {name}")
