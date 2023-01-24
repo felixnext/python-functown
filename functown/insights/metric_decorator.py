@@ -58,7 +58,7 @@ class InsightsMetrics(InsightsDecorator):
         enable_name_column: bool = False,
         **kwargs,
     ):
-        super().__init__(instrumentation_key, kwargs=["metrics"], **kwargs)
+        super().__init__(instrumentation_key, added_kw=["metrics"], **kwargs)
 
         self.metric_specs = metrics
         self.callback = callback
@@ -73,11 +73,12 @@ class InsightsMetrics(InsightsDecorator):
             kwargs["metrics"] = handler
 
             # register exporter for the metrics
-            handler.connect_insights(
-                self.instrumentation_key,
-                self.callback,
-                enable_standard_metrics=self.perf_metrics,
-            )
+            if self.instrumentation_key is not None:
+                handler.connect_insights(
+                    self.instrumentation_key,
+                    self.callback,
+                    enable_standard_metrics=self.perf_metrics,
+                )
         except Exception as ex:
             logging.error(f"Failed to create Metrics Logger: {ex}")
             raise ex
