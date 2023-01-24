@@ -11,6 +11,6 @@ from .metrics import MetricType, Metric, MetricSpec, MetricTimeValue, MetricHand
 
 from .logger_decorator import InsightsLogs
 from .event_decorator import InsightsEvents
-from .tracer_decorator import InsightsTracer
+from .tracer_decorator import InsightsTracer, TracerObject
 from .metric_decorator import InsightsMetrics
 from .all_decorator import Insights
