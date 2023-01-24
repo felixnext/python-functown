@@ -6,8 +6,6 @@ Copyright (c) 2023, Felix Geilert
 import logging
 
 import pytest
-from pytest_mock.plugin import MockerFixture
-from opencensus.ext.azure.log_exporter import AzureLogHandler
 
 from functown import InsightsLogs
 from functown.insights import filter_debug, create_filter_ids
@@ -32,19 +30,11 @@ from functown.insights import filter_debug, create_filter_ids
         "filter_ids_false",
     ],
 )
-# TODO: fix this test
-@pytest.mark.skip
-def test_logger_decorator(
-    mocker: MockerFixture, caplog, send_basics, callback, clean_logger
-):
+def test_logger_decorator(caplog, send_basics, callback, clean_logger):
     """Tests the InsightsLogger decorator"""
-    # mock the AzureLogHandler
-    mocker.patch.object(AzureLogHandler, "__init__", return_value=None)
-    mocker.patch.object(AzureLogHandler, "add_telemetry_processor", return_value=None)
-
     # create the decorator
     @InsightsLogs(
-        "inst_key",
+        None,
         send_basics=send_basics,
         callback=callback,
         clean_logger=clean_logger,

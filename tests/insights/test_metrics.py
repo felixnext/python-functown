@@ -146,7 +146,7 @@ def test_metric_multi():
     # define a spec
     specs = [
         MetricSpec(
-            name="counter_metric",
+            name="multi_counter_metric",
             description="first metric",
             unit="count",
             columns=["col1"],
@@ -154,7 +154,7 @@ def test_metric_multi():
             dtype=int,
         ),
         MetricSpec(
-            name="gauge_metric",
+            name="multi_gauge_metric",
             description="first metric",
             unit="count",
             columns=["col1"],
@@ -166,7 +166,24 @@ def test_metric_multi():
     # create a metric
     handler = MetricHandler()
     handler.create_metrics(specs)
-    m1 = handler["counter_metric"]
-    m2 = handler.gauge_metric
+    m1 = handler["multi_counter_metric"]
+    m2 = handler.multi_gauge_metric
 
-    # FIXME: implement full unit test here
+    # record some values in the first metric
+    for i in [2, 5, 1, 3, 4]:
+        m1.record(i)
+        time.sleep(0.2)
+
+    # assert value in the first metric
+    assert m1.current_data == 5
+
+    # record some values in the second metric
+    for i in [10, 30, 20, 10, 40]:
+        m2.record(i)
+        time.sleep(0.2)
+
+    # assert value in the second metric
+    assert m2.current_data == 40
+
+    # assert value in the first metric again (to see if we can read both)
+    assert m1.current_data == 5

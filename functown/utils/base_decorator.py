@@ -8,8 +8,12 @@ Copyright (c) 2023, Felix Geilert
 
 import logging
 from inspect import Parameter, Signature, signature
-import traceback
+import threading
 from typing import Dict, Any, Union, List, Callable, Tuple
+
+
+# defines type used for ids
+IDTYPE = str
 
 
 class BaseDecorator(object):
@@ -37,7 +41,7 @@ class BaseDecorator(object):
 
     # internal counter to keep track of the decorator level per function
     # NOTE: this has to be done on a class level, since each decorator is a new instance
-    __decorator_count: Dict[int, Tuple[int, int]] = {}
+    __decorator_count: Dict[IDTYPE, Tuple[int, IDTYPE]] = {}
 
     def __init__(
         self,
@@ -143,17 +147,6 @@ class BaseDecorator(object):
         """
         return func(*args, **kwargs)
 
-    def __increase_count(self, id_func, id_exec):
-        """Retrieves the function id and increases the count of the decorator."""
-        self.__address = id_exec
-        if self.is_last_decorator is True:
-            self.__class__.__decorator_count[self.__address] = (1, None)
-        else:
-            self.__class__.__decorator_count[self.__address] = (
-                self.__class__.__decorator_count[id_func][0] + 1,
-                id_func,
-            )
-
     def __modify_sig(self, sig: Signature, kws: List[str]) -> Signature:
         """Removes the given keywords from the signature."""
         kws = [kw for kw in kws if kw in sig.parameters]
@@ -164,12 +157,43 @@ class BaseDecorator(object):
 
         return sig
 
-    def __id(self, func):
-        """Returns the id of the function.
+    def __id(self, obj) -> IDTYPE:
+        """Returns the id of the object."""
+        thread_id = threading.current_thread().ident
+        return f"{thread_id}-{id(obj)}"
+        # return id(obj)
 
-        self.level = len([member for member in inspect.getmembers(self.func) if inspect.isfunction(member[1]) and member[1].__name__ == "wrapped"])
-        """
-        return id(func)
+    def __set_base_id(self, func) -> IDTYPE:
+        """Returns the id of the function and sets the base id for the decorator."""
+        base_id = self.__id(func)
+        self.__class__.__decorator_count[base_id] = (0, None)
+        return base_id
+
+    def __find_closure(self, func):
+        """Returns the id of the first BaseDecorator or None."""
+        if func.__closure__ is None:
+            return None
+
+        obj = [
+            cl.cell_contents
+            for cl in func.__closure__
+            if cl.cell_contents is not None
+            and issubclass(cl.cell_contents.__class__, BaseDecorator)
+        ]
+        obj = [self.__id(o) for o in obj[:1]]
+
+        return obj[0] if len(obj) > 0 else None
+
+    def __increase_count(self):
+        """Executes the increase of the decorator count."""
+        base_id, level = None, 0
+        self.__address = self.__id(self)
+        ref_id = self.__find_closure(self.func)
+        if ref_id is None or ref_id not in self.__class__.__decorator_count:
+            base_id = self.__set_base_id(self.func)
+        else:
+            level, base_id = self.__class__.__decorator_count[ref_id]
+        self.__class__.__decorator_count[self.__address] = (level + 1, base_id)
 
     def __call__(self, *args, **kwargs) -> Union[Any, Callable[[Any], Any]]:
         """Call the decorator.
@@ -191,48 +215,27 @@ class BaseDecorator(object):
             def execute(*args, **kwargs):
                 return self.run(self.func, *args, **kwargs)
 
+            # update the reference pointer
+            self.__increase_count()
+
             # clean additional arguments from the signature return for the outer decorator
             if self.mask_signature:
                 sig = signature(self.func)
-                kws = [
-                    kw
-                    for kw in sig.parameters
-                    if sig.parameters[kw].kind
-                    in [Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL]
-                ]
+                kws = (
+                    []
+                    if self.is_first_decorator is False
+                    else [
+                        kw
+                        for kw in sig.parameters
+                        if sig.parameters[kw].kind
+                        in [Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL]
+                    ]
+                )
                 execute.__signature__ = self.__modify_sig(sig, self.added_kw + kws)
-
-            # update the reference pointer
-            # TODO: refactor this code
-            base_id = None
-            self.__address = id(self)
-            level = 0
-            if self.func.__closure__ is None:
-                base_id = id(self.func)
-                self.__class__.__decorator_count[base_id] = (level, None)
-            else:
-                obj = [
-                    cl.cell_contents
-                    for cl in self.func.__closure__
-                    if cl.cell_contents is not None
-                    and issubclass(cl.cell_contents.__class__, BaseDecorator)
-                ]
-                if len(obj) == 0:
-                    base_id = id(self.func)
-                    self.__class__.__decorator_count[base_id] = (level, None)
-                else:
-                    ref_id = id(obj[0])
-                    if ref_id not in self.__class__.__decorator_count:
-                        base_id = id(self.func)
-                        self.__class__.__decorator_count[base_id] = (level, None)
-                    else:
-                        level, base_id = self.__class__.__decorator_count[ref_id]
-            self.__class__.__decorator_count[self.__address] = (level + 1, base_id)
-            # self.__increase_count(self.__id(self.func), self.__id(execute))
 
             return execute
 
         # --- code for non-init decorator ---
-        # if the function is passed to the init, just run the function
-        self.__increase_count(self.__id(self.func), self.__id(self))
+        # increase reference counters
+        self.__increase_count()
         return self.run(self.func, *args, **kwargs)

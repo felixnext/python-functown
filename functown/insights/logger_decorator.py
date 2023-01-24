@@ -81,12 +81,13 @@ class InsightsLogs(InsightsDecorator):
             logger = self._create_logger(self.clean_logger, "logger", *args, **kwargs)
 
             # create azure handler
-            log_handler = AzureLogHandler(
-                connection_string=f"InstrumentationKey={self.instrumentation_key}"
-            )
-            if self.callback is not None:
-                log_handler.add_telemetry_processor(self.callback)
-            logger.addHandler(log_handler)
+            if self.instrumentation_key is not None:
+                log_handler = AzureLogHandler(
+                    connection_string=f"InstrumentationKey={self.instrumentation_key}"
+                )
+                if self.callback is not None:
+                    log_handler.add_telemetry_processor(self.callback)
+                logger.addHandler(log_handler)
             kwargs["logger"] = logger
         except Exception as ex:
             logging.error(f"Failed to create insights logger: {ex}")

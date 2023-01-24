@@ -50,10 +50,16 @@ class InsightsTracer(InsightsDecorator):
 
     def run(self, func, *args, **kwargs):
         try:
-            tracer = Tracer(
-                exporter=AzureExporter(
+            # create exporter
+            exporter = None
+            if self.instrumentation_key is not None:
+                exporter = AzureExporter(
                     connection_string=f"InstrumentationKey={self.instrumentation_key}"
-                ),
+                )
+
+            # generate tracer
+            tracer = Tracer(
+                exporter=exporter,
                 sampler=ProbabilitySampler(self.sampling_rate),
             )
             kwargs["tracer"] = tracer

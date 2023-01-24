@@ -1,4 +1,5 @@
 from typing import List
+import logging
 
 from functown.utils import BaseDecorator
 
@@ -10,6 +11,9 @@ class InsightsDecorator(BaseDecorator):
         super().__init__(None, added_kw=added_kw, **kwargs)
 
         if instrumentation_key is None:
-            raise ValueError("No instrumentation key provided.")
+            logging.warning(
+                "No instrumentation key provided. "
+                "No data will be sent to Application Insights."
+            )
 
         self.instrumentation_key = instrumentation_key
