@@ -135,6 +135,7 @@ class ErrorHandler(BaseDecorator):
 
                 # add list system to logger
                 if self.return_logs is True:
+                    logs = []
                     logger.addHandler(LogListHandler(logs))
                     kwargs["logs"] = logs
 
