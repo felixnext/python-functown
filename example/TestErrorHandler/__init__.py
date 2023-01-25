@@ -8,14 +8,15 @@ from distutils.util import strtobool
 import logging
 import json
 import os
+import sys
 from typing import List
 
 import azure.functions as func
 
-try:
-    import functown_local as ft
-except ImportError:
-    import functown as ft
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(dir_path, ".."))
+
+import functown as ft  # noqa: E402
 
 
 # retrieve the debug flag from the environment
