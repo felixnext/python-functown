@@ -16,7 +16,32 @@ from .tracer_decorator import InsightsTracer
 
 
 class Insights(InsightsDecorator):
-    """Decorator that combines functionality from LogHandler, MetricsHandler, TraceHandler and EventHandler."""
+    """Decorator that combines functionality from LogHandler, MetricsHandler,
+    TraceHandler and EventHandler.
+
+    Args:
+        instrumentation_key (str): The instrumentation key for the Application Insights.
+        enable_logger (bool): Whether to enable logging to Application Insights.
+            Defaults to `False`.
+        send_basics (bool): Whether to send basic information about the function call
+            to Application Insights. Defaults to `False`.
+        logger_callback (Callable[[Envelope], bool]): A callback function that is called
+            after the logger has been called. Defaults to `None`.
+        clean_logger (bool): Whether to clean the logger after the function call.
+            Defaults to `False`.
+        enable_events (bool): Whether to enable events to Application Insights.
+            Defaults to `False`.
+        event_callback (Callable[[Envelope], bool]): A callback function that is called
+            after the event has been called. Defaults to `None`.
+        clean_events (bool): Whether to clean the events after the function call.
+            Defaults to `False`.
+        enable_metrics (bool): Whether to enable metrics to Application Insights.
+            Defaults to `False`.
+        metrics (List[MetricSpec]): A list of metrics to be logged. Defaults to `None`.
+        enable_tracer (bool): Whether to enable tracing to Application Insights.
+            Defaults to `False`.
+        sampling_rate (float): The sampling rate for the tracer. Defaults to `1.0`.
+    """
 
     def __init__(
         self,
@@ -52,6 +77,7 @@ class Insights(InsightsDecorator):
         self.sampling_rate = sampling_rate
 
     def run(self, func, *args, **kwargs):
+        decs = []
         if self.enable_logger:
             logger = InsightsLogs(
                 self.instrumentation_key,
@@ -59,7 +85,7 @@ class Insights(InsightsDecorator):
                 callback=self.logger_callback,
                 clean_logger=self.clean_logger,
             )
-            func = logger(func, *args, **kwargs)
+            decs.append(logger)
 
         if self.enable_events:
             events = InsightsEvents(
@@ -67,16 +93,20 @@ class Insights(InsightsDecorator):
                 callback=self.event_callback,
                 clean_events=self.clean_events,
             )
-            func = events(func, *args, **kwargs)
+            decs.append(events)
 
         if self.enable_metrics:
             metrics = InsightsMetrics(self.instrumentation_key, metrics=self.metrics)
-            metrics(func, *args, **kwargs)
+            decs.append(metrics)
 
         if self.enable_tracer:
             tracer = InsightsTracer(
                 self.instrumentation_key, sampling_rate=self.sampling_rate
             )
-            func = tracer(func, *args, **kwargs)
+            decs.append(tracer)
+
+        # reverse order
+        for dec in decs[::-1]:
+            func = dec(func)
 
         return func(*args, **kwargs)

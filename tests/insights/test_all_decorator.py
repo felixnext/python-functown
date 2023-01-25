@@ -23,6 +23,7 @@ def test_all_decorator(caplog):
     @Insights(
         instrumentation_key=None,
         enable_logger=True,
+        send_basics=True,
         enable_events=True,
         enable_tracer=True,
         enable_metrics=True,
@@ -36,7 +37,7 @@ def test_all_decorator(caplog):
         req: HttpRequest,
         logger: logging.Logger,
         events: logging.Logger,
-        trace: TracerObject,
+        tracer: TracerObject,
         metrics: MetricHandler,
         *args,
         **kwargs,
@@ -45,7 +46,7 @@ def test_all_decorator(caplog):
         logger.info(f"name: {logger.name}")
         events.info(f"event: {events.name}")
         events.info(f"event: {events.name}", extra={"custom_dimensions": {"test": 1}})
-        with trace.span("test"):
+        with tracer.span("test"):
             x = 1 + 3
             y = x - 10  # noqa: F841
         met = metrics.get_metric("dec_all_metric")
@@ -62,14 +63,22 @@ def test_all_decorator(caplog):
     assert type(res) == HttpResponse
     assert res.status_code == 200
     assert res.mimetype == "text/plain"
-    assert res.get_body() == b"test: 10"
+    assert res.get_body() == b"test: [10]"
 
     assert len(caplog.records) == 10
-    assert caplog.records[0].levelname == "WARNING"
-    assert caplog.records[0].msg == (
-        "No instrumentation key provided. "
-        "No data will be sent to Application Insights."
-    )
+    for i in range(5):
+        assert caplog.records[i].levelname == "WARNING"
+        assert caplog.records[i].msg == (
+            "No instrumentation key provided. "
+            "No data will be sent to Application Insights."
+        )
 
-    assert caplog.records[1].levelname == "INFO"
-    assert caplog.records[1].msg == "Metric Setup Complete"
+    assert caplog.records[5].levelname == "INFO"
+    assert caplog.records[5].msg == "Metric Setup Complete"
+    assert caplog.records[6].msg == "test"
+    assert caplog.records[6].name == "InsightsLogs"
+    assert caplog.records[7].msg == "name: InsightsLogs"
+    assert caplog.records[8].msg == "event: InsightsEvents"
+    assert caplog.records[8].name == "InsightsEvents"
+    assert caplog.records[9].msg == "event: InsightsEvents"
+    assert caplog.records[9].custom_dimensions == {"test": 1}
