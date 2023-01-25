@@ -158,7 +158,7 @@ def test_metric_multi():
             description="first metric",
             unit="count",
             columns=["col1"],
-            mtype=MetricType.COUNTER,
+            mtype=MetricType.GAUGE,
             dtype=int,
         ),
     ]
@@ -175,15 +175,22 @@ def test_metric_multi():
         time.sleep(0.2)
 
     # assert value in the first metric
-    assert m1.current_data == 5
+    assert m1.current_data == [5]
 
     # record some values in the second metric
-    for i in [10, 30, 20, 10, 40]:
+    for i in [10, 30, 1, 20, 10, 40]:
         m2.record(i)
         time.sleep(0.2)
 
-    # assert value in the second metric
-    assert m2.current_data == 40
+    # assert both metrics
+    assert m2.current_data == [40]
+    assert m1.current_data == [5]
 
-    # assert value in the first metric again (to see if we can read both)
-    assert m1.current_data == 5
+    # additional recordings
+    for i in [9, 7]:
+        m1.record(i)
+        time.sleep(0.2)
+
+    # assert both metrics
+    assert m2.current_data == [40]
+    assert m1.current_data == [7]

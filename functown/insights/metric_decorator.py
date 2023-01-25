@@ -27,7 +27,7 @@ Copyright (c) 2023, Felix Geilert
 """
 
 import logging
-from typing import List, Callable
+from typing import List, Callable, Dict, Any
 
 from opencensus.ext.azure import metrics_exporter
 
@@ -47,6 +47,12 @@ class InsightsMetrics(InsightsDecorator):
             to Application Insights. Defaults to `True`.
         enable_name_column (bool): Whether to enable the `__name` column is
             automatically added to the metrics. Defaults to `False`.
+        global_columns (Dict[str, Any]): A dictionary of columns that will be added
+            to all metrics. Defaults to `None`.
+        hard_fail (bool): Whether to hard fail if the metrics cannot be created.
+            Defaults to `True`.
+        flush_seconds (float): Interval (seconds) in which the metrics are flushed
+            to Application Insights. Defaults to `15`.
     """
 
     def __init__(
@@ -56,6 +62,9 @@ class InsightsMetrics(InsightsDecorator):
         callback: Callable[[metrics_exporter.Envelope], None] = None,
         enable_perf_metrics: bool = True,
         enable_name_column: bool = False,
+        global_columns: Dict[str, Any] = None,
+        hard_fail: bool = True,
+        flush_seconds: float = 15,
         **kwargs,
     ):
         super().__init__(instrumentation_key, added_kw=["metrics"], **kwargs)
@@ -64,23 +73,36 @@ class InsightsMetrics(InsightsDecorator):
         self.callback = callback
         self.perf_metrics = enable_perf_metrics
         self.enable_name_column = enable_name_column
+        self.global_columns = global_columns
+        self.hard_fail = hard_fail
+        self.flush_sec = flush_seconds
+        self._handler = None
 
     def run(self, func, *args, **kwargs):
         try:
             # generate the handler
-            handler = MetricHandler(self.enable_name_column)
-            handler.create_metrics(self.metric_specs)
-            kwargs["metrics"] = handler
+            self._handler = MetricHandler(self.enable_name_column)
+            self._handler.create_metrics(
+                self.metric_specs,
+                hard_fail=self.hard_fail,
+                global_columns=self.global_columns,
+            )
+            kwargs["metrics"] = self._handler
 
             # register exporter for the metrics
             if self.instrumentation_key is not None:
-                handler.connect_insights(
+                self._handler.connect_insights(
                     self.instrumentation_key,
                     self.callback,
                     enable_standard_metrics=self.perf_metrics,
+                    flush_sec=self.flush_sec,
                 )
         except Exception as ex:
             logging.error(f"Failed to create Metrics Logger: {ex}")
             raise ex
 
         return func(*args, **kwargs)
+
+    def teardown(self, *args, **kwargs):
+        if self._handler is not None:
+            self._handler.shutdown()

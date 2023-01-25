@@ -147,6 +147,10 @@ class BaseDecorator(object):
         """
         return func(*args, **kwargs)
 
+    def teardown(self, *args, **kwargs):
+        """Implement this function to perform teardown logic."""
+        pass
+
     def __modify_sig(self, sig: Signature, kws: List[str]) -> Signature:
         """Removes the given keywords from the signature."""
         kws = [kw for kw in kws if kw in sig.parameters]
@@ -213,7 +217,12 @@ class BaseDecorator(object):
             self.func = self._get("func", 0, *args, **kwargs)
 
             def execute(*args, **kwargs):
-                return self.run(self.func, *args, **kwargs)
+                # execute function
+                res = self.run(self.func, *args, **kwargs)
+                # execute teardown
+                self.teardown(*args, **kwargs)
+                # return result
+                return res
 
             # update the reference pointer
             self.__increase_count()

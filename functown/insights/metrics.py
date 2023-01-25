@@ -41,11 +41,23 @@ class MetricType(Enum):
 class MetricSpec:
     """A definition of a metric.
 
+    Define namespaces if you have co-dependent metrics that you want to always record
+    together.
+
     Args:
         name (str): The name of the metric.
         description (str): The description of the metric.
         unit (str): The unit of the metric.
-        aggregation (Aggregation): The aggregation of the metric.
+        columns (List[str]): The columns of the metric. These will be used to
+            log additional data into the metric. Note that metric values aggregations
+            happens based on a group by these columns (and timestamps).
+        mtype (MetricType): The type of the metric. Defines how data logged is
+            aggregated.
+        dtype (Type[Union[int, float]]): The data type of the metric. Defaults to int.
+        namespace (str): The namespace of the metric. Metrics in the same namespace will
+            be recorded together. Note that this might lead to increases in counter
+            metrics (as None values are logged that are counted). Per default every
+            metric is in its own namespace.
     """
 
     name: str
@@ -54,7 +66,18 @@ class MetricSpec:
     columns: List[str]
     mtype: MetricType
     dtype: Type[Union[int, float]] = int
+    namespace: str = None
     start_value: Union[int, float, None] = None
+
+    @property
+    def used_namespace(self) -> str:
+        """The namespace that is used for the metric.
+
+        If no namespace is defined, the name is used.
+        """
+        if self.namespace is None:
+            return self.name
+        return self.namespace
 
 
 @dataclass
@@ -76,7 +99,16 @@ class MetricTimeValue:
 
 
 class Metric:
-    """Handler class for metrics that allow to record values"""
+    """Handler class for metrics that allow to record values
+
+    Args:
+        spec (MetricSpec): The specification of the metric.
+        vm (stats_module.ViewManager): The view manager.
+        map (MeasurementMap): The measurement map (should it be reused).
+        add_name_column (bool): Whether to add the name of the metric as a column.
+        handler_columns (Dict[str, Any]): Additional columns specified by the handler.
+            These will always be added to the metric if set. Defaults to None.
+    """
 
     _NAME_COL = "__name"
 
@@ -86,11 +118,13 @@ class Metric:
         vm: stats_module.ViewManager,
         map: MeasurementMap,
         add_name_column: bool = True,
+        handler_columns: Dict[str, Any] = None,
     ):
         # store the spec
         self.spec = spec
         self.map = map
         self.add_name_column = add_name_column
+        self.required_columns = handler_columns or {}
 
         # select the measure
         measure = {
@@ -105,63 +139,109 @@ class Metric:
             MetricType.SUM: aggregation_module.SumAggregation,
         }[spec.mtype]
 
+        # generate the columns
+        cols = spec.columns or []
+        if add_name_column:
+            cols = [self._NAME_COL] + cols
+        cols += list(self.required_columns.keys())
+        # remove duplicates (preserving order)
+        cols = list(dict.fromkeys(cols))
+
         # generate data
         self.measure = measure(spec.name, spec.description, spec.unit)
         self.view = view_module.View(
-            f"{spec.name}_view",
+            self.__view_name,
             spec.description,
-            (["__name"] if add_name_column else []) + (spec.columns or []),
+            cols,
             self.measure,
             agg() if spec.start_value is None else agg(spec.start_value),
         )
         vm.register_view(self.view)
 
-    def add_default_column(self, key: str, value: Any):
+        # generate the default tag map
+        self.tag = self.__build_tag_map({})
+
+    @property
+    def __view_name(self):
+        return f"{self.spec.name}_view"
+
+    def __build_tag_map(self, columns: Dict[str, Any]) -> tag_map_module.TagMap:
+        """Builds a tag map from the columns."""
+        tag = tag_map_module.TagMap()
+        if self.add_name_column:
+            tag.insert(self._NAME_COL, self.spec.name)
+
+        # add the required columns (ordering is important)
+        # note that user columns overwrite required columns
+        cols = {**self.required_columns, **columns}
+        for key, value in cols.items():
+            if key not in self.spec.columns:
+                logging.warning(
+                    f"Key {key} is not a valid column for metric {self.sepc.name}. "
+                    "Ignoring."
+                )
+                continue
+            tag.insert(key, value)
+        return tag
+
+    def add_default_column(self, key: str, value: Any, persistent: bool = False):
         """Adds a default tag to the metric.
 
         Note: These tags are only provided when no specific tags are provided.
+
+        Args:
+            key (str): The key of the tag.
+            value (Any): The value of the tag.
+            persistent (bool): Persistent columns are always added to the record,
+                even if user-specified columns are provided. Defaults to False.
         """
+        # ensure that the key is specified
         if key not in self.spec.columns:
             logging.warning(
                 f"Key {key} is not a valid column for this metric. Ingnoring."
             )
             return
         self.tag.insert(key, value)
+        if persistent:
+            self.required_columns[key] = value
 
-    def record(self, value: Union[float, int], columns: Dict[str, Any] = None):
+    def _record_measure_only(self, value: Union[float, int]):
         """Records a value for the metric."""
         # generate the tags
-        # FIXME: find solution for record and handle tags
-        """tag_map = self.tag
-        if columns is not None:
-            tag_map = tag_map_module.TagMap()
-            tag_map.insert(self._NAME_COL, self.spec.name)
-            for key, cval in columns.items():
-                if key not in self.spec.columns:
-                    logging.warning(
-                        f"Key {key} is not a valid column for this metric. Ignoring."
-                    )
-                    continue
-                tag_map.insert(key, cval)"""
-
-        # check if value is float, int or str
         if isinstance(value, float):
             self.map.measure_float_put(self.measure, value)
         elif isinstance(value, int):
             self.map.measure_int_put(self.measure, value)
         else:
             raise ValueError(f"Value {value} is not a valid value.")
-        # self.map.record(tag_map)
+
+    def record(self, value: Union[float, int], columns: Dict[str, Any] = None):
+        """Records a value for the metric."""
+        # generate the tags
+        tag_map = self.tag if columns is None else self.__build_tag_map(columns)
+
+        # measure the value and record it to a feature map
+        self._record_measure_only(value)
+        self.map.record(tag_map)
 
     @property
-    def current_data(self) -> List[Union[int, float]]:
+    def current_data(self) -> Union[List[Union[int, float]], None]:
         """Returns the data of the metric.
 
         Note that this will not return timestamps or columns.
         It is also derived from all combined data.
 
-        In case of gauge and sum only the last value is returned (List of size 1).
+        Returns:
+            List of data. In case of gauge and sum only the last value is returned
+            (List of size 1). If no data is available, None is returned.
         """
+        # retrieve the overall data
+        fts = self.full_time_series
+
+        # check if data is available
+        if len(fts) == 0:
+            return None
+
         # check the type
         if self.spec.mtype in (MetricType.GAUGE, MetricType.SUM):
             return [self.full_time_series[-1].value]
@@ -209,7 +289,9 @@ class Metric:
         data: List[OCMetric] = list(self.map.measure_to_view_map.get_metrics(end))
         # retrieve the time series data
         # NOTE: each new tag configuration will create a new time-series
-        # FIXME: this might be the problem (multiple data points here from different measurements)
+        data = [d for d in data if d.descriptor.name == self.__view_name]
+        if len(data) == 0:
+            return []
         series: List[OCTimeSeries] = data[0].time_series
 
         # filter timeseries (based on label_values)
@@ -250,12 +332,11 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
         self._metrics: Dict[str, Metric] = {}
         self._enable_standard_metrics = True
         self._add_name_column = add_name_column
+        self._maps: Dict[str, MeasurementMap] = {}
 
         # create opencensus data
         self._vm = stats_module.stats.view_manager
-        # TODO: figure out how to handle different maps for different namespaces?
-        self._map = stats_module.stats.stats_recorder.new_measurement_map()
-        self._exporter = None
+        self._exporter: metrics_exporter.MetricsExporter = None
 
     def __getattribute__(self, name):
         try:
@@ -281,7 +362,12 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
         """
         return self._metrics.get(name, None)
 
-    def create_metrics(self, specs: List[MetricSpec], hard_fail: bool = True) -> bool:
+    def create_metrics(
+        self,
+        specs: List[MetricSpec],
+        hard_fail: bool = True,
+        global_columns: Dict[str, Any] = None,
+    ) -> bool:
         """Creates a list of metrics based on the specifications.
 
         Args:
@@ -302,15 +388,55 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
                     )
                 return False
 
-        # FIXME: handle different tagmaps
+        # find all namespaces and create maps
+        namespaces = set([spec.used_namespace for spec in specs])
+        for ns in namespaces:
+            if ns not in self._maps:
+                self._maps[ns] = stats_module.stats.stats_recorder.new_measurement_map()
 
         # only create metrics if all are valid
         for spec in specs:
             self._metrics[spec.name] = Metric(
-                spec, self._vm, self._map, self._add_name_column
+                spec,
+                self._vm,
+                self._maps[spec.used_namespace],
+                add_name_column=self._add_name_column,
+                handler_columns=global_columns,
             )
 
         return True
+
+    def record(self, values: Dict[str, Any], columns: Dict[str, Any] = None):
+        """Records the given values to the metrics.
+
+        In this case the values for all metrics are recorded under the same tag-map
+
+        NOTE: This will ignore tags set by individual metrics. (Including default tags).
+
+        Args:
+            values (Dict[str, Any]): The values to record.
+            columns (Dict[str, Any]): The columns to record the values under.
+        """
+        # generate tag_map
+        tag_map = tag_map_module.TagMap()
+        if self._add_name_column:
+            tag_map.insert(self._NAME_COL, "global")
+        for key, value in (columns or {}).items():
+            if key == self._NAME_COL:
+                raise ValueError(f"Column {key} is reserved.")
+            tag_map.insert(key, value)
+
+        # measure the values
+        namespaces = []
+        for name, value in values.items():
+            if name not in self._metrics:
+                raise ValueError(f"Metric {name} does not exist.")
+            self._metrics[name]._record_measure_only(value)
+            namespaces.append(self._metrics[name].spec.used_namespace)
+
+        # complete recording
+        for ns in set(namespaces):
+            self._maps[ns].record(tag_map)
 
     @property
     def is_insights_enabled(self) -> bool:
@@ -322,13 +448,18 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
         instrumentation_key: str,
         callback: Callable[[metrics_exporter.Envelope], bool],
         enable_standard_metrics: bool = None,
+        flush_sec: float = 15,
     ):
         """Connects the metrics to Azure Insights.
 
         Args:
             instrumentation_key (str): The instrumentation key to connect to.
+            callback (Callable[[metrics_exporter.Envelope], bool]): The callback to
+                filter the metrics.
             enable_standard_metrics (bool, optional): Whether to enable standard metrics.
                 Defaults to None.
+            flush_sec (float, optional): The interval to flush the metrics.
+                Defaults to 15.
         """
         # update the metrics
         metrics = enable_standard_metrics
@@ -340,6 +471,7 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
         self._exporter = metrics_exporter.new_metrics_exporter(
             enable_standard_metrics=self.perf_metrics,
             connection_string=f"InstrumentationKey={instrumentation_key}",
+            export_interval=flush_sec,
         )
 
         # check for filter
@@ -347,3 +479,8 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
             self._exporter.add_telemetry_processor(callback)
 
         self._vm.register_exporter(self._exporter)
+
+    def shutdown(self):
+        """Flushes remaining data."""
+        if self._exporter is not None:
+            self._exporter.shutdown()
