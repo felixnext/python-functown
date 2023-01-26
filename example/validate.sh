@@ -4,6 +4,23 @@
 
 FAPP="functownexample"
 
+# FIXME: get the app name as well
+while [[ $# -gt 0 ]]
+    do
+    APP_KEY="$1"
+
+    case --key in
+        $APP_KEY)
+        APP_KEY="$2"
+        shift # past argument
+        ;;
+        *)
+                # unknown option
+        ;;
+    esac
+    shift # past value
+done
+
 function red(){
     echo -e "\x1B[31m $1 \x1B[0m"
 }
@@ -20,25 +37,6 @@ function bold(){
     echo -e "\x1B[1m $1 \x1B[0m"
 }
 
-while [[ $# -gt 0 ]]
-    do
-    key="$1"
-
-    case --key in
-        $key)
-        key="$2"
-        shift # past argument
-        ;;
-        *)
-                # unknown option
-        ;;
-    esac
-        shift # past value
-done
-
-echo "Validating function app: $FAPP"
-# echo "Key: $key"
-
 function make_request() {
     local body=${1:-""}
     local type=${2:-"GET"}
@@ -47,9 +45,9 @@ function make_request() {
     local response
 
     if [[ "$type" == "POST" ]]; then
-        response=$(curl -X POST -H "Content-Type: application/json" -d "$body" "https://${FAPP}.azurewebsites.net/api/$handler?code=${key}")
+        response=$(curl -s -X POST -H "Content-Type: application/json" -d "$body" "https://${FAPP}.azurewebsites.net/api/$handler?code=${APP_KEY}")
     else
-        response=$(curl -X GET "https://${FAPP}.azurewebsites.net/api/$handler?code=${key}&$query_param")
+        response=$(curl -s -X GET "https://${FAPP}.azurewebsites.net/api/$handler?code=${APP_KEY}&$query_param")
     fi
 
     echo $response
@@ -77,8 +75,9 @@ function validate_response() {
 
     # check completed
     if [ "$completed" != "$expected_completed" ]; then
-        red "Test failed (completed not equal)"
-        exit 1
+        red "❌ Test failed (completed not equal)"
+        red "Response: $response"
+        return
     fi
 
     # iterate all splitted keys and check if in response
@@ -86,9 +85,9 @@ function validate_response() {
         local value=$(echo $response | jq ".$key")
 
         if [ -z "$value" ] || [ "$value" == "null" ]; then
-            red "Test failed (key $key not found)"
+            red "❌ Test failed (key $key not found)"
             red "Response: $response"
-            exit 1
+            return
         fi
     done
 
@@ -99,13 +98,13 @@ function validate_response() {
         local response_value=$(echo $response | jq ".$key")
 
         if [ "$response_value" != "$value" ]; then
-            red "Test failed (key $key not equal to $value - $response_value)"
+            red "❌ Test failed (key $key not equal to $value - $response_value)"
             red "Response: $response"
-            exit 1
+            return
         fi
     done
 
-    green "Test passed"
+    green "✅ Test passed"
 }
 
 function run_test_case() {
@@ -123,7 +122,7 @@ function run_test_case() {
 
     # validate if response is correct
     if [ -z "$response" ]; then
-        red "Test failed (response empty)"
+        red "❌ Test failed (response empty)"
         red "Response: $response"
     else
         validate_response "$response" "$completed" "$expected_keys" "$expected_key_values"
@@ -137,6 +136,8 @@ function echo_header() {
     echo "======================================"
 }
 
+echo "Validating $FAPP"
+
 # --- ErrorHandler ---
 echo_header "ErrorHandler"
 
@@ -144,7 +145,17 @@ echo_header "ErrorHandler"
 run_test_case "Minimal" '{"req": "1", "use_event": true, "use_logger": true}' "POST" "" "TestErrorHandler" "true" "logs,results.body_param" "results.use_exeption:false"
 
 # Test 2
-run_test_case "Minimal" "" "GET" "req=2&use_event=false&use_logger=false" "TestErrorHandler" "false", "trace", ""
+# FIXME: complete test case
+run_test_case "Minimal" "" "GET" "req=2&use_event=false&use_logger=false" "TestErrorHandler" "false" "trace" ""
 
 # TODO: add more test cases
+
+# --- Events ---
+echo_header "Insights Events"
+
+# --- Logs ---
+echo_header "Insights Logger"
+
+# --- Metrics ---
+echo_header "Insights Metrics"
 
