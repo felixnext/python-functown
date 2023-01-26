@@ -4,7 +4,6 @@ Example function to test metric logging capabilities of the application insights
 Copyright (c) 2023, Felix Geilert
 """
 
-from distutils.util import strtobool
 import logging
 import json
 import os
@@ -63,8 +62,10 @@ INST_KEY = ft.utils.get_config("APP_INSIGHTS_KEY", None)
         ),
     ],
 )
+@ft.ArgsHandler()
 def main(
     req: func.HttpRequest,
+    args: ft.RequestArgHandler,
     logger: logging.Logger,
     logs: List[str],
     metrics: ft.insights.MetricHandler,
@@ -74,9 +75,6 @@ def main(
 
     # create a logger (allow to return log as list)
     logger.info(f"Using functown v{ft.__version__}")
-
-    # generate args parser
-    args = ft.RequestArgHandler(req)
 
     sleep_time = args.get_body_query("sleep", required=False, default=0, map_fct=float)
     logger.info(f"sleep time (sec): {sleep_time}")

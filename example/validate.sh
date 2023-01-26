@@ -2,24 +2,38 @@
 # This script is used to validate the function app deployment
 # It serves as integration test
 
+# default values
 FAPP="functownexample"
+debug=false
 
-# FIXME: get the app name as well
+# parse parameters
 while [[ $# -gt 0 ]]
     do
-    APP_KEY="$1"
-
-    case --key in
-        $APP_KEY)
+    case $1 in
+        --debug)
+        debug=true
+        shift # past argument
+        ;;
+        --name)
+        FAPP="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        --key)
         APP_KEY="$2"
         shift # past argument
+        shift # past value
         ;;
         *)
                 # unknown option
         ;;
     esac
-    shift # past value
 done
+
+# counter
+test_success=0
+test_failed=0
+
 
 function red(){
     echo -e "\x1B[31m $1 \x1B[0m"
@@ -53,6 +67,14 @@ function make_request() {
     echo $response
 }
 
+function failed() {
+    local reason=${1:-""}
+    local response=${2:-""}
+    red "❌ Test failed ($reason)"
+    red "Response: $response"
+    test_failed=$((test_failed+1))
+}
+
 function validate_response() {
     # response
     local response=${1:-""}
@@ -66,17 +88,16 @@ function validate_response() {
     local dict=()
 
     # parse expected_keys into array and store in keys
-    IFS=',' read -ra keys <<< "$expected_keys"
-    IFS=',' read -ra dict <<< "$expected_key_values"
+    IFS='|' read -ra keys <<< "$expected_keys"
+    IFS='|' read -ra dict <<< "$expected_key_values"
 
     # parse data
     local completed=$(echo $response | jq '.completed')
     local req_param=$(echo $response | jq '.results.req_param')
 
     # check completed
-    if [ "$completed" != "$expected_completed" ]; then
-        red "❌ Test failed (completed not equal)"
-        red "Response: $response"
+    if [[ ("$completed" != "$expected_completed") && (("$completed" != "null") || ("$expected_completed" != "false")) ]]; then
+        failed "completed: $completed - expected: $expected_completed" "$response"
         return
     fi
 
@@ -85,8 +106,7 @@ function validate_response() {
         local value=$(echo $response | jq ".$key")
 
         if [ -z "$value" ] || [ "$value" == "null" ]; then
-            red "❌ Test failed (key $key not found)"
-            red "Response: $response"
+            failed "key $key not found" "$response"
             return
         fi
     done
@@ -97,14 +117,24 @@ function validate_response() {
         local value=$(echo $pair | cut -d':' -f2)
         local response_value=$(echo $response | jq ".$key")
 
+        # remove double quotes and single quotes around value
+        value=$(echo $value | sed -e 's/^"//' -e 's/"$//')
+        value=$(echo $value | sed -e "s/^'//" -e "s/'$//")
+        response_value=$(echo $response_value | sed -e 's/^"//' -e 's/"$//')
+        response_value=$(echo $response_value | sed -e "s/^'//" -e "s/'$//")
+
         if [ "$response_value" != "$value" ]; then
-            red "❌ Test failed (key $key not equal to $value - $response_value)"
-            red "Response: $response"
+            failed "key $key not equal to $value - $response_value" "$response"
             return
         fi
     done
 
+    # test was successful
     green "✅ Test passed"
+    if [ "$debug" = true ]; then
+        green "Response: $response"
+    fi
+    test_success=$((test_success+1))
 }
 
 function run_test_case() {
@@ -122,8 +152,7 @@ function run_test_case() {
 
     # validate if response is correct
     if [ -z "$response" ]; then
-        red "❌ Test failed (response empty)"
-        red "Response: $response"
+        failed "response empty" "$response"
     else
         validate_response "$response" "$completed" "$expected_keys" "$expected_key_values"
     fi
@@ -131,6 +160,7 @@ function run_test_case() {
 
 function echo_header() {
     local name="${1:-""}"
+    echo ""
     echo "======================================"
     bold "$(blue "Testing $name")"
     echo "======================================"
@@ -140,22 +170,55 @@ echo "Validating $FAPP"
 
 # --- ErrorHandler ---
 echo_header "ErrorHandler"
+hdl="TestErrorHandler"
 
-# Test 1
-run_test_case "Minimal" '{"req": "1", "use_event": true, "use_logger": true}' "POST" "" "TestErrorHandler" "true" "logs,results.body_param" "results.use_exeption:false"
+# Minimal tests
+run_test_case "Minimal" '{"req": "1", "body_param": "foo"}' "POST" "" "$hdl" "true" "logs|results.body_param" "results.use_exeption:false|results.body_param:foo"
+run_test_case "Minimal" "" "GET" "req=1&query_param=foo" "$hdl" "true" "logs|results.body_param" "results.use_exeption:false|results.query_param:foo"
 
-# Test 2
-# FIXME: complete test case
-run_test_case "Minimal" "" "GET" "req=2&use_event=false&use_logger=false" "TestErrorHandler" "false" "trace" ""
+# Required Missing
+run_test_case "Required Missing" '{}' "POST" "" "$hdl" "false" "trace|user_message|logs" "type:<class 'functown.errors.errors.ArgError'>"
+run_test_case "Required Missing" "" "GET" "use_event=false&use_logger=false" "$hdl" "false" "trace|user_message|logs" "type:<class 'functown.errors.errors.ArgError'>"
 
-# TODO: add more test cases
+# Exception
+run_test_case "Exception" '{"req": 1, "use_exception": true}' "POST" "" "$hdl" "false" "trace|user_message|logs" "type:<class 'Exception'>"
+
+# printing
+run_test_case "Printing" '{"req": 1, "print_list": [1,2,3]}' "POST" "" "$hdl" "true" "logs|results.body_param" "results.print_list:[ 1, 2, 3 ]"
 
 # --- Events ---
 echo_header "Insights Events"
+hdl="TestInsightsEvents"
+
+run_test_case "Event" '{"use_event": true}' "POST" "" "$hdl" "true" "logs|results.use_event" "results.use_event:true"
 
 # --- Logs ---
 echo_header "Insights Logger"
+hdl="TestInsightsLogs"
+
+run_test_case "Logger" '{"use_logger": true}' "POST" "" "$hdl" "true" "logs|results.use_logger" "results.use_logger:true|results.use_tracer:false"
+
+run_test_case "Tracer" '{"use_tracer": true}' "POST" "" "$hdl" "true" "logs|results.use_tracer" "results.use_tracer:true|results.use_logger:false"
 
 # --- Metrics ---
 echo_header "Insights Metrics"
+hdl="TestInsightsMetrics"
 
+run_test_case "Metric" '{"counter": 10, "gauge": 5, "sum": 4}' "POST" "" "$hdl" "true" "logs|results.sleep_sec" "results.counter.hits:10|results.counter.data:[ 10 ]|results.gauge.data:[ 5 ]|results.sum.data:[ 4 ]"
+
+# --- Statistics ---
+# print pretty statistics about failed and successful tests
+echo ""
+echo "======================================"
+bold "$(blue "Test Results")"
+echo "======================================"
+green "Success: $test_success"
+red "Failed: $test_failed"
+percentage=$(echo "scale=2; $test_success / ($test_success + $test_failed) * 100" | bc)
+if [ $(echo "$percentage < 100" | bc) -eq 1 ]; then
+    red "Percentage: $percentage%"
+else
+    green "Percentage: $percentage%"
+fi
+
+echo "======================================"

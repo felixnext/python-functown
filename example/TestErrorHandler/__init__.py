@@ -78,7 +78,7 @@ def main(
     logger.info(f"print_list: {print_list}")
 
     # check a required param
-    req_param = args.get_body("req", True)
+    req_param = args.get_body_query("req", True)
     logger.info(f"req_param: {req_param}")
 
     # generate report

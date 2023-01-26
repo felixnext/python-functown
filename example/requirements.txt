@@ -3,8 +3,15 @@
 # Manually managing azure-functions-worker may cause unexpected issues
 
 azure-functions
-functown
+# functown
 time-helper
 
 # adding temporary deps for development testing
+requests>=2.27.1
+
+# used for JWT
+cryptography>=36.0.2
+python-jose>=3.3.0
+
+# used for metrics
 opencensus-ext-azure>=1.1.8
