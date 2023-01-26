@@ -1,5 +1,8 @@
 # 🎷 FuncTown 🎷
 
+[![PyPI Version](https://img.shields.io/pypi/v/functown.svg)](https://pypi.python.org/pypi/functown)
+![Packaging](https://github.com/felixnext/python-functown/actions/workflows/python-package.yml/badge.svg)
+
 `FuncTown` is a python library that is designed to make your life with Azure Functions easier.
 
 The core features of `FuncTown` are:
@@ -79,3 +82,5 @@ decorators.
 
 ‼️ If you find this library helpful or have suggestions please let me know.
 Also any contributions are welcome! ‼️
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/felixnext)

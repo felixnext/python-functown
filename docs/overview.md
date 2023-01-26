@@ -1,7 +1,5 @@
 # FuncTown Documentation
 
-{:toc}
-
 ## Philosophy
 
 `FuncTown` follows the idea that Azure Functions should be atomic and do one thing well.

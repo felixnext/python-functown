@@ -3,8 +3,6 @@
 This guide is intended for developers who want to contribute to the development of
 `FuncTown`.
 
-{:toc}
-
 ## Setup
 
 The repository contains a `conda-dev.yml` file which can be used to create a conda
