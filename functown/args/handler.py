@@ -4,11 +4,36 @@ Bunch of Handler Code for Arguments
 
 
 from distutils.util import strtobool
+from enum import Enum
 import logging
+from typing import Any, Optional, Union, List, Callable
 
 from azure.functions import HttpRequest
 
 from functown.errors import ArgError
+
+
+# create enum str class with different header names
+class HeaderEnum(Enum[str]):
+    """List of Headers to be used in typed way"""
+
+    authorization = "Authorization"
+    content_type = "Content-Type"
+    accept = "Accept"
+    host = "Host"
+    user_agent = "User-Agent"
+    x_forwarded_for = "X-Forwarded-For"
+    x_forwarded_proto = "X-Forwarded-Proto"
+    x_forwarded_host = "X-Forwarded-Host"
+    x_forwarded_port = "X-Forwarded-Port"
+    x_forwarded_prefix = "X-Forwarded-Prefix"
+    x_forwarded_path = "X-Forwarded-Path"
+    x_forwarded_query = "X-Forwarded-Query"
+    x_forwarded_method = "X-Forwarded-Method"
+    x_forwarded_scheme = "X-Forwarded-Scheme"
+    x_forwarded_protocol = "X-Forwarded-Protocol"
+    x_forwarded_uri = "X-Forwarded-Uri"
+    x_forwarded_url = "X-Forwarded-Url"
 
 
 class RequestArgHandler:
@@ -17,13 +42,14 @@ class RequestArgHandler:
 
     def _convert(
         self,
-        name,
-        arg,
-        required=False,
-        map_fct=None,
-        allowed=None,
-        list_map=None,
-        default=None,
+        name: str,
+        arg: str,
+        required: bool = False,
+        map_fct: Callable[[str], Any] = None,
+        allowed: Optional[List[Any]] = None,
+        # TODO: patch this
+        list_map: Callable[[]] = None,
+        default: Optional[Any] = None,
     ):
         # check if required
         if required and arg is None:
@@ -60,7 +86,7 @@ class RequestArgHandler:
 
         return arg
 
-    def _parse_body(self, name):
+    def _parse_body(self, name) -> Any:
         arg = None
         try:
             body = self.req.get_json()
@@ -77,7 +103,17 @@ class RequestArgHandler:
         allowed=None,
         list_map=None,
         default=None,
-    ):
+    ) -> Any:
+        """Parses a value from the body of the request
+
+        Args:
+            name (str): Name of the argument
+            required (bool, optional): If the argument is required. Defaults to False.
+            map_fct (function, optional): Function to map the value. Defaults to None.
+            allowed (list, optional): List of allowed values. Defaults to None.
+            list_map (function, optional): Function to map the list. Defaults to None.
+            default (any, optional): Default value if not set. Defaults to None.
+        """
         arg = self._parse_body(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
@@ -89,7 +125,8 @@ class RequestArgHandler:
         allowed=None,
         list_map=None,
         default=None,
-    ):
+    ) -> Any:
+        """Parses a value from the query string of the request"""
         arg = self.req.params.get(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
@@ -101,7 +138,8 @@ class RequestArgHandler:
         allowed=None,
         list_map=None,
         default=None,
-    ):
+    ) -> Optional[Union[str, Any]]:
+        """Parses a value from the route parameters of the request"""
         arg = self.req.route_params.get(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
@@ -114,6 +152,7 @@ class RequestArgHandler:
         list_map=None,
         default=None,
     ):
+        """Parses a value from the body or query string of the request"""
         arg = self.req.params.get(name)
         if not arg and self.req.get_body():
             arg = self._parse_body(name)
@@ -150,3 +189,19 @@ class RequestArgHandler:
             raise ArgError(f"File {name} could not be parsed")
 
         return file
+
+    def get_header(
+        self,
+        name,
+        required=False,
+        map_fct=None,
+        allowed=None,
+        list_map=None,
+        default=None,
+    ):
+        """Parses a header from the request
+
+        Note: You can use `HeaderEnum` to get the correct header name
+        """
+        arg = self.req.headers.get(name)
+        return self._convert(name, arg, required, map_fct, allowed, list_map, default)
