@@ -8,7 +8,7 @@ import logging
 import json
 import os
 from random import random
-from time import time
+import time
 import sys
 from typing import List
 
@@ -61,6 +61,7 @@ INST_KEY = ft.utils.get_config("APP_INSIGHTS_KEY", None)
             start_value=0.5,
         ),
     ],
+    flush_seconds=1,
 )
 @ft.ArgsHandler()
 def main(
@@ -76,15 +77,17 @@ def main(
     # create a logger (allow to return log as list)
     logger.info(f"Using functown v{ft.__version__}")
 
-    sleep_time = args.get_body_query("sleep", required=False, default=0, map_fct=float)
+    sleep_time = args.get_body_query(
+        "sleep", required=False, default=0.5, map_fct=float
+    )
     logger.info(f"sleep time (sec): {sleep_time}")
 
     # check if counter should be updated
     cnum = args.get_body_query("counter", required=False, default=0, map_fct=int)
     counter = metrics["counter"]  # access via getitem
     for i in range(cnum):
-        counter.record(1, tag1="a", tag2="b")
-        logger.info(f"{i} - counter: {counter.data}")
+        counter.record(1, {"tag1": "a", "tag2": "b"})
+        logger.info(f"{i} - counter: {counter.current_data}")
         # check for sleep
         if sleep_time > 0:
             time.sleep(sleep_time)
@@ -93,8 +96,8 @@ def main(
     gnum = args.get_body_query("gauge", required=False, default=0, map_fct=int)
     gauge = metrics.gauge  # access via attribute
     for _ in range(gnum):
-        gauge.record(random(), tag1="a", tag4="b")
-        logger.info(f"gauge: {gauge.data}")
+        gauge.record(random(), {"tag1": "a", "tag4": "b"})
+        logger.info(f"gauge: {gauge.current_data}")
         # check for sleep
         if sleep_time > 0:
             time.sleep(sleep_time)
@@ -103,8 +106,8 @@ def main(
     snum = args.get_body_query("sum", required=False, default=0, map_fct=int)
     summ = metrics.get_metric("sum")  # access via get_metric method
     for i in range(snum):
-        summ.record(i, tag3="a", tag5="b")
-        logger.info(f"{i} - sum: {summ.data}")
+        summ.record(i, {"tag3": "a", "tag5": "b"})
+        logger.info(f"{i} - sum: {summ.current_data}")
         # check for sleep
         if sleep_time > 0:
             time.sleep(sleep_time)
@@ -121,7 +124,7 @@ def main(
             },
             "gauge": {
                 "hits": gnum,
-                "data": gauge.data,
+                "data": gauge.current_data,
             },
             "sum": {
                 "hits": snum,

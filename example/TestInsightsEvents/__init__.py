@@ -30,7 +30,7 @@ INST_KEY = ft.utils.get_config("APP_INSIGHTS_KEY", None)
     enable_logger=True,
     return_logs=True,
 )
-@ft.InsightsEventHandler(
+@ft.InsightsEvents(
     instrumentation_key=INST_KEY,
     enable_events=True,
 )
