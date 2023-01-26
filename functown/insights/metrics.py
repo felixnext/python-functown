@@ -37,6 +37,19 @@ class MetricType(Enum):
     SUM = 3
 
 
+class MetricUseMode(Enum):
+    """The use mode of the metric."""
+
+    HARD_FAIL = 1
+    """Hard Fail in the case of a namespace conflict"""
+    SOFT_FAIL = 2
+    """Soft Fail in the case of a namespace conflict"""
+    OVERWRITE = 3
+    """Overwrite in the case of a namespace conflict"""
+    REUSE = 4
+    """Reuse in the case of a namespace conflict"""
+
+
 @dataclass
 class MetricSpec:
     """A definition of a metric.
@@ -365,28 +378,42 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
     def create_metrics(
         self,
         specs: List[MetricSpec],
-        hard_fail: bool = True,
+        mode: MetricUseMode = MetricUseMode.HARD_FAIL,
         global_columns: Dict[str, Any] = None,
     ) -> bool:
         """Creates a list of metrics based on the specifications.
 
         Args:
             specs (List[MetricSpec]): The specifications to create the metrics for.
-            hard_fail (bool): Whether to hard fail on a namespace conflict.
-                Defaults to True.
+            mode (MetricUseMode): The mode to use when creating the metrics.
+            global_columns (Dict[str, Any]): The global columns to add to all metrics.
+                Defaults to None.
 
         Returns:
             bool: Whether the metrics were created successfully.
         """
+        # remove items that are already created
+        if mode == MetricUseMode.REUSE:
+            dropped = [spec.name for spec in specs if spec.name in self._metrics]
+            if len(dropped) > 0:
+                logging.info(f"Reusing metrics: {', '.join(dropped)}")
+                specs = [spec for spec in specs if spec.name not in self._metrics]
+
         # check if metric names are valid
-        for spec in specs:
-            # check for error
-            if spec.name in self._metrics or spec.name in self.__dict__:
-                if hard_fail:
-                    raise ValueError(
-                        f"Metric {spec.name} generates a namespace conflict."
-                    )
-                return False
+        if mode in [MetricUseMode.HARD_FAIL, MetricUseMode.SOFT_FAIL]:
+            for spec in specs:
+                # check for error
+                if spec.name in self._metrics or spec.name in self.__dict__:
+                    if mode == MetricUseMode.HARD_FAIL:
+                        raise ValueError(
+                            f"Metric {spec.name} generates a namespace conflict."
+                        )
+                    return False
+        else:
+            dropped = [spec.name for spec in specs if spec.name in self.__dict__]
+            if len(dropped) > 0:
+                logging.info(f"Dropping metrics (illegal names): {', '.join(dropped)}")
+                specs = [spec for spec in specs if spec.name not in self.__dict__]
 
         # find all namespaces and create maps
         namespaces = set([spec.used_namespace for spec in specs])

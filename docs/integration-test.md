@@ -1,3 +1,0 @@
-# FuncTown Integration Test
-
-TODO
