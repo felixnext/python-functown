@@ -108,7 +108,7 @@ class Insights(InsightsDecorator):
         for dec in self.__decs:
             kws.extend(dec.added_kw)
 
-        super().__init__(instrumentation_key, added_kw=[], **kwargs)
+        super().__init__(instrumentation_key, added_kw=kws, **kwargs)
 
     def run(self, func, *args, **kwargs):
         # reverse order

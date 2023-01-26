@@ -32,7 +32,7 @@ from typing import List, Callable, Dict, Any
 from opencensus.ext.azure import metrics_exporter
 
 from .base import InsightsDecorator
-from .metrics import MetricHandler, MetricSpec
+from .metrics import MetricHandler, MetricSpec, MetricUseMode
 
 
 class InsightsMetrics(InsightsDecorator):
@@ -63,7 +63,7 @@ class InsightsMetrics(InsightsDecorator):
         enable_perf_metrics: bool = True,
         enable_name_column: bool = False,
         global_columns: Dict[str, Any] = None,
-        hard_fail: bool = True,
+        mode: MetricUseMode = MetricUseMode.REUSE,
         flush_seconds: float = 15,
         **kwargs,
     ):
@@ -74,7 +74,7 @@ class InsightsMetrics(InsightsDecorator):
         self.perf_metrics = enable_perf_metrics
         self.enable_name_column = enable_name_column
         self.global_columns = global_columns
-        self.hard_fail = hard_fail
+        self.mode = mode
         self.flush_sec = flush_seconds
         self._handler = None
 
@@ -84,7 +84,7 @@ class InsightsMetrics(InsightsDecorator):
             self._handler = MetricHandler(self.enable_name_column)
             self._handler.create_metrics(
                 self.metric_specs,
-                hard_fail=self.hard_fail,
+                mode=self.mode,
                 global_columns=self.global_columns,
             )
             kwargs["metrics"] = self._handler

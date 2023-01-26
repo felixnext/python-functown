@@ -34,6 +34,7 @@ INST_KEY = ft.utils.get_config("APP_INSIGHTS_KEY", None)
 )
 @ft.InsightsMetrics(
     instrumentation_key=INST_KEY,
+    mode=ft.insights.MetricUseMode.OVERWRITE,
     metrics=[
         ft.insights.MetricSpec(
             name="counter",
@@ -78,7 +79,7 @@ def main(
     logger.info(f"Using functown v{ft.__version__}")
 
     sleep_time = args.get_body_query(
-        "sleep", required=False, default=0.5, map_fct=float
+        "sleep", required=False, default=0.1, map_fct=float
     )
     logger.info(f"sleep time (sec): {sleep_time}")
 
@@ -101,6 +102,9 @@ def main(
         # check for sleep
         if sleep_time > 0:
             time.sleep(sleep_time)
+    # set final gauge value
+    if gnum > 0:
+        gauge.record(10, {"tag1": "a", "tag4": "b"})
 
     # check if sum should be updated
     snum = args.get_body_query("sum", required=False, default=0, map_fct=int)
@@ -120,7 +124,9 @@ def main(
             "counter": {
                 "hits": cnum,
                 "data": counter.current_data,
-                "time_series": counter.full_time_series,
+                "time_series": [
+                    (p.value, p.timestamp.isoformat()) for p in counter.full_time_series
+                ],
             },
             "gauge": {
                 "hits": gnum,
@@ -129,7 +135,9 @@ def main(
             "sum": {
                 "hits": snum,
                 "data": summ.current_data,
-                "time_series": summ.full_time_series,
+                "time_series": [
+                    (p.value, p.timestamp.isoformat()) for p in summ.full_time_series
+                ],
             },
         },
         "logs": logs,
