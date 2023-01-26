@@ -4,7 +4,6 @@ Example function to test insights events
 Copyright (c) 2023, Felix Geilert
 """
 
-from distutils.util import strtobool
 import logging
 import json
 import os

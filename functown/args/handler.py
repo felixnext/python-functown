@@ -1,5 +1,7 @@
 """
 Bunch of Handler Code for Arguments
+
+Copyright (c) 2023, Felix Geilert
 """
 
 
@@ -14,7 +16,7 @@ from functown.errors import ArgError
 
 
 # create enum str class with different header names
-class HeaderEnum(Enum[str]):
+class HeaderEnum(str, Enum):
     """List of Headers to be used in typed way"""
 
     authorization = "Authorization"
@@ -47,10 +49,9 @@ class RequestArgHandler:
         required: bool = False,
         map_fct: Callable[[str], Any] = None,
         allowed: Optional[List[Any]] = None,
-        # TODO: patch this
-        list_map: Callable[[]] = None,
+        list_map: Callable[[Any], List[Any]] = None,
         default: Optional[Any] = None,
-    ):
+    ) -> Optional[Union[Any, List[Any]]]:
         # check if required
         if required and arg is None:
             raise ArgError(f"Argument {name} is not set, but required!")
@@ -86,7 +87,7 @@ class RequestArgHandler:
 
         return arg
 
-    def _parse_body(self, name) -> Any:
+    def _parse_body(self, name: str) -> Optional[Any]:
         arg = None
         try:
             body = self.req.get_json()
@@ -103,7 +104,7 @@ class RequestArgHandler:
         allowed=None,
         list_map=None,
         default=None,
-    ) -> Any:
+    ) -> Optional[Union[str, Any, List[Any]]]:
         """Parses a value from the body of the request
 
         Args:
@@ -119,39 +120,39 @@ class RequestArgHandler:
 
     def get_query(
         self,
-        name,
-        required=False,
-        map_fct=None,
-        allowed=None,
-        list_map=None,
-        default=None,
-    ) -> Any:
+        name: str,
+        required: bool = False,
+        map_fct: Callable[[str], Any] = None,
+        allowed: Optional[List[Any]] = None,
+        list_map: Callable[[Any], List[Any]] = None,
+        default: Optional[Any] = None,
+    ) -> Optional[Union[str, Any, List[Any]]]:
         """Parses a value from the query string of the request"""
         arg = self.req.params.get(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
     def get_route(
         self,
-        name,
-        required=False,
-        map_fct=None,
-        allowed=None,
-        list_map=None,
-        default=None,
-    ) -> Optional[Union[str, Any]]:
+        name: str,
+        required: bool = False,
+        map_fct: Callable[[str], Any] = None,
+        allowed: Optional[List[Any]] = None,
+        list_map: Callable[[Any], List[Any]] = None,
+        default: Optional[Any] = None,
+    ) -> Optional[Union[str, Any, List[Any]]]:
         """Parses a value from the route parameters of the request"""
         arg = self.req.route_params.get(name)
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
     def get_body_query(
         self,
-        name,
-        required=False,
-        map_fct=None,
-        allowed=None,
-        list_map=None,
-        default=None,
-    ):
+        name: str,
+        required: bool = False,
+        map_fct: Callable[[str], Any] = None,
+        allowed: Optional[List[Any]] = None,
+        list_map: Callable[[Any], List[Any]] = None,
+        default: Optional[Any] = None,
+    ) -> Optional[Union[str, Any, List[Any]]]:
         """Parses a value from the body or query string of the request"""
         arg = self.req.params.get(name)
         if not arg and self.req.get_body():
@@ -162,11 +163,11 @@ class RequestArgHandler:
         self,
         name: str,
         required: bool = False,
-        map_fct=None,
-        allowed=None,
-        list_map=None,
-        default=None,
-    ):
+        map_fct: Callable[[str], Any] = None,
+        allowed: Optional[List[Any]] = None,
+        list_map: Callable[[Any], List[Any]] = None,
+        default: Optional[Any] = None,
+    ) -> Optional[Union[str, Any, List[Any]]]:
         arg = None
         try:
             arg = self.req.form[name]
@@ -174,7 +175,7 @@ class RequestArgHandler:
             logging.warning(f"Form value {name} could not be parsed: {ex}")
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
 
-    def get_file(self, name: str, required: bool = False):
+    def get_file(self, name: str, required: bool = False) -> Optional[Any]:
         """Parses a file from the form data of the request"""
         file = None
 
@@ -192,13 +193,13 @@ class RequestArgHandler:
 
     def get_header(
         self,
-        name,
-        required=False,
-        map_fct=None,
-        allowed=None,
-        list_map=None,
-        default=None,
-    ):
+        name: str,
+        required: bool = False,
+        map_fct: Callable[[str], Any] = None,
+        allowed: Optional[List[Any]] = None,
+        list_map: Callable[[Any], List[Any]] = None,
+        default: Optional[Any] = None,
+    ) -> Optional[Union[str, Any, List[Any]]]:
         """Parses a header from the request
 
         Note: You can use `HeaderEnum` to get the correct header name
