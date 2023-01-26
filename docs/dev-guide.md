@@ -135,3 +135,7 @@ your functions app.
 
 > Optionally you can also provide the `--debug` flag to print the return values of the
 > functions.
+
+**Be Aware:** That metrics can be kept in memeory for multiple function runs. That means
+that executing the integration test multiple times might yield errors in the `metrics`
+related tests.
