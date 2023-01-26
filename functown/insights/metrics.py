@@ -469,7 +469,7 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
 
         # generate exporter
         self._exporter = metrics_exporter.new_metrics_exporter(
-            enable_standard_metrics=self.perf_metrics,
+            enable_standard_metrics=metrics,
             connection_string=f"InstrumentationKey={instrumentation_key}",
             export_interval=flush_sec,
         )

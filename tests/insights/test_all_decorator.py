@@ -4,6 +4,7 @@ Copyright (c) 2023, Felix Geilert
 """
 
 import logging
+from inspect import signature
 
 from azure.functions import HttpRequest, HttpResponse
 
@@ -82,3 +83,39 @@ def test_all_decorator(caplog):
     assert caplog.records[8].name == "InsightsEvents"
     assert caplog.records[9].msg == "event: InsightsEvents"
     assert caplog.records[9].custom_dimensions == {"test": 1}
+
+
+def test_all_decorator_signature():
+    """Tests the InsightsLogger decorator"""
+    # create the decorator
+    @Insights(
+        instrumentation_key=None,
+        enable_logger=True,
+        send_basics=True,
+        enable_events=True,
+        enable_tracer=True,
+        enable_metrics=True,
+        metrics=[
+            MetricSpec(
+                "dec_all_metric", "custom metric", "sample", [], MetricType.COUNTER, int
+            )
+        ],
+    )
+    def test_func(
+        req: HttpRequest,
+        logger: logging.Logger,
+        events: logging.Logger,
+        tracer: TracerObject,
+        metrics: MetricHandler,
+        *args,
+        **kwargs,
+    ):
+        return HttpResponse("test", status_code=200, mimetype="text/plain")
+
+    # run the function
+    # FIXME: make sure signature is correct
+    sig = signature(test_func)
+
+    assert len(sig.parameters) == 1
+    assert "req" in sig.parameters
+    assert sig.parameters["req"].annotation == HttpRequest

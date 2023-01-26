@@ -59,8 +59,6 @@ class Insights(InsightsDecorator):
         sampling_rate: float = 1.0,
         **kwargs,
     ):
-        super().__init__(instrumentation_key, added_kw=[], **kwargs)
-
         self.enable_logger = enable_logger
         self.send_basics = send_basics
         self.logger_callback = logger_callback
@@ -76,11 +74,10 @@ class Insights(InsightsDecorator):
         self.enable_tracer = enable_tracer
         self.sampling_rate = sampling_rate
 
-    def run(self, func, *args, **kwargs):
         decs = []
         if self.enable_logger:
             logger = InsightsLogs(
-                self.instrumentation_key,
+                instrumentation_key,
                 send_basics=self.send_basics,
                 callback=self.logger_callback,
                 clean_logger=self.clean_logger,
@@ -89,24 +86,33 @@ class Insights(InsightsDecorator):
 
         if self.enable_events:
             events = InsightsEvents(
-                self.instrumentation_key,
+                instrumentation_key,
                 callback=self.event_callback,
                 clean_events=self.clean_events,
             )
             decs.append(events)
 
         if self.enable_metrics:
-            metrics = InsightsMetrics(self.instrumentation_key, metrics=self.metrics)
+            metrics = InsightsMetrics(instrumentation_key, metrics=self.metrics)
             decs.append(metrics)
 
         if self.enable_tracer:
             tracer = InsightsTracer(
-                self.instrumentation_key, sampling_rate=self.sampling_rate
+                instrumentation_key, sampling_rate=self.sampling_rate
             )
             decs.append(tracer)
 
+        # set and expand
+        self.__decs = decs
+        kws = []
+        for dec in self.__decs:
+            kws.extend(dec.added_kw)
+
+        super().__init__(instrumentation_key, added_kw=[], **kwargs)
+
+    def run(self, func, *args, **kwargs):
         # reverse order
-        for dec in decs[::-1]:
+        for dec in self.__decs[::-1]:
             func = dec(func)
 
         return func(*args, **kwargs)
