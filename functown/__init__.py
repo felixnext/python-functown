@@ -6,12 +6,13 @@ try:
     from . import utils
     from . import errors
     from .errors import ErrorHandler
-    from .args import RequestArgHandler
+    from .args import RequestArgHandler, ArgsHandler
 except Exception as ex:
     logging.error(f"Not all dependencies installed: {ex}")
 
 try:
     from . import auth
+    from .auth import AuthHandler
 except Exception as ex:
     logging.error(f"Unable to load auth: {ex}")
 

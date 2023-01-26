@@ -220,7 +220,7 @@ def test_error_decorator_response(caplog, exc, method, body, return_errors):
         assert caplog.records[pos + 1].levelname == "ERROR"
         assert caplog.records[pos + 2].message == "Trace:"
         assert caplog.records[pos + 3].message == (
-            f"- error_decorator.py:122:{'163' if exc == TokenError else '172'}"
+            f"- error_decorator.py:122:{'164' if exc == TokenError else '173'}"
             " - Vars: ('self', 'func', 'args', 'kwargs', 'logs', 'logger', 'ex')"
         )
         assert (

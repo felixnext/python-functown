@@ -11,7 +11,7 @@ import os
 from random import random
 from time import time
 import sys
-from typing import List, Dict
+from typing import List
 
 import azure.functions as func
 
@@ -22,8 +22,8 @@ import functown as ft  # noqa: E402
 
 
 # retrieve the debug flag from the environment
-DEBUG = bool(strtobool(os.getenv("FUNC_DEBUG", "False")))
-INST_KEY = os.getenv("APP_INSIGHTS_KEY", None)
+DEBUG = ft.utils.get_flag("FUNC_DEBUG", False)
+INST_KEY = ft.utils.get_config("APP_INSIGHTS_KEY", None)
 
 
 @ft.ErrorHandler(

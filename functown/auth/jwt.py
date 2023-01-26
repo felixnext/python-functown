@@ -6,11 +6,11 @@ Note: This is currently required for python functions as they have no claim prin
 Copyright 2022 - Felix Geilert
 """
 
-
-import os
+import base64
+from dataclasses import dataclass
 import logging
 from time import time
-import base64
+from typing import Dict, Any, Union, Set, List
 
 import requests
 from jose import jwt
@@ -24,51 +24,103 @@ from functown.errors import TokenError
 BEARER = "bearer "
 
 
-def ensure_bytes(key):
+@dataclass
+class Token:
+    """Token object that contains the claims of the token.
+
+    Args:
+        name (str): Passed username in the token
+        oid (str): Unique ID of the user
+        scopes (set): Set of access scopes for the user from the token
+        local_mode (bool): Defines if function runs in local mode
+    """
+
+    user_id: str
+    scopes: Set[str]
+    verified: bool = False
+    claims: Dict[str, Any] = None
+    _local: bool = False
+
+    @property
+    def local(self) -> bool:
+        """Returns if the function is running in local mode."""
+        return self._local
+
+
+def _ensure_bytes(key: Union[str, bytes]) -> bytes:
+    """Make sure the key is bytes"""
     if isinstance(key, str):
         key = key.encode("utf-8")
     return key
 
 
-def decode_value(val):
-    decoded = base64.urlsafe_b64decode(ensure_bytes(val) + b"==")
+def _decode_value(val):
+    """Decodes a base64 encoded string."""
+    decoded = base64.urlsafe_b64decode(_ensure_bytes(val) + b"==")
     return int.from_bytes(decoded, "big")
 
 
-def decode_token(headers, verify=True):
+def decode_token(
+    headers, issuer_url: str = None, audience: str = None, verify=True
+) -> Token:
     """Verifies the request headers and returns a list of claims.
 
     Note that this will not verify the token as this should be done by azure.
+    This also requires that the JWT token contains at least the following claims:
+    - `oid`: The unique ID of the user
+    - `scp`: The access scopes of the user
+    - `exp`: The expiration time of the token
 
     Args:
         headers: req.header information to retrieve the token
+        issuer_url (str): The issuer url to retrieve the public key. Only required if
+            `verify` is set to `True`.
+        audience (str): The audience to verify the token against. Only required if
+            `verify` is set to `True`.
+        verify (bool): Whether to verify the token signature against the issuer.
+            Defaults to `True`.
 
     Returns:
         name (str): Passed username in the token
         oid (str): Unique ID of the user
         scopes (set): Set of access scopes for the user from the token
         local_mode (bool): Defines if function runs in local mode
+
+    Raises:
+        TokenError: If the token could not be parsed (this is a user facing error)
+        ValueError: If the issuer url is not provided
+        IOError: If the issuer data could not be retrieved
     """
     # get token
     hdict = dict(headers)
     token = hdict.get("authorization", None)
-    if token and len(token) > len(BEARER):
-        token = token[len(BEARER) :]
+    min_len = len(BEARER)
+
+    # validate if the token exists
+    if token and len(token) > min_len:
+        token = token[min_len:]
     else:
         raise TokenError("JWT Token could not be parsed")
 
-    # check if in localmode
+    # check if in localmode (for azure functions)
     host = hdict.get("host", None)
     local_mode = host and host.split(":")[0].lower() == "localhost"
 
+    # check if token should be verified
     if verify:
-        # retrieve the headers
+        # check if issuer url is provided
+        if issuer_url is None:
+            raise ValueError("Issuer URL is required for verification")
+        if audience is None:
+            logging.warning("Audience is not provided for verification")
+
+        # parse headers from the JWT token
         header_data = jwt.get_unverified_header(token)
 
         # retrieve issuer data
-        issuer_res = requests.request("get", os.getenv("B2C_ISSUER_URL"))
+        issuer_res = requests.request("get", issuer_url)
         if issuer_res.status_code != 200:
-            raise IOError("Unable to obtain issuer data")
+            raise IOError(f"Unable to obtain issuer data from {issuer_url}")
         issuer = issuer_res.json()
 
         # retrieve keys
@@ -88,7 +140,7 @@ def decode_token(headers, verify=True):
 
         # retrieve pub key
         pk = (
-            RSAPublicNumbers(n=decode_value(sig["n"]), e=decode_value(sig["e"]))
+            RSAPublicNumbers(n=_decode_value(sig["n"]), e=_decode_value(sig["e"]))
             .public_key(default_backend())
             .public_bytes(
                 encoding=serialization.Encoding.PEM,
@@ -101,7 +153,7 @@ def decode_token(headers, verify=True):
             token,
             key=pk,
             algorithms=[header_data["alg"]],
-            audience=os.getenv("B2C_APP_ID"),
+            audience=audience,
             issuer=issuer["issuer"],
         )
     else:
@@ -116,7 +168,7 @@ def decode_token(headers, verify=True):
 
         # compare
         if (user_id and user_id != claims["oid"]) or (
-            user_name and user_name != claims["name"]
+            user_name and user_name != claims.get("name", user_name)
         ):
             raise TokenError("Provided user information does not match")
     else:
@@ -126,7 +178,8 @@ def decode_token(headers, verify=True):
     cur_time = time()
     if claims["exp"] < cur_time:
         logging.error(
-            f"Current time is {cur_time} but token is expired at {claims['exp']} (diff: {claims['exp'] - cur_time})"
+            f"Current time is {cur_time} but token is expired at {claims['exp']} "
+            f"(diff: {claims['exp'] - cur_time})"
         )
         raise TokenError("Token is expired")
 
@@ -134,10 +187,16 @@ def decode_token(headers, verify=True):
     scopes = set(claims["scp"].split(" "))
 
     # pass on the data
-    return claims["name"], claims["oid"], scopes, local_mode
+    return Token(claims["oid"], scopes, verify, claims, local_mode)
 
 
-def verify_user(req, scopes=None, verify=False):
+def verify_user(
+    req,
+    scopes: List[str] = None,
+    issuer_url: str = None,
+    audience: str = None,
+    verify: bool = False,
+) -> Token:
     """Verifies the user send in the request
 
     Args:
@@ -153,7 +212,7 @@ def verify_user(req, scopes=None, verify=False):
     """
     # verify the token
     try:
-        user, user_id, user_scp, local = decode_token(req.headers, verify=verify)
+        token = decode_token(req.headers, issuer_url, audience, verify=verify)
     except TokenError as ex:
         raise TokenError(ex.msg, 500)
 
@@ -165,9 +224,8 @@ def verify_user(req, scopes=None, verify=False):
 
         # iterate scopes
         for scp in scopes:
-            if scp not in user_scp:
-                raise TokenError("Missing scope for current access", 401)
+            if scp not in token.scopes:
+                raise TokenError("Missing authorization scope for current access", 401)
 
     # provide data
-    logging.info("Token decoded")
-    return user, user_id, user_scp, local
+    return token

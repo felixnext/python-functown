@@ -4,7 +4,6 @@ Example function to test error handling capabilities.
 Copyright (c) 2023, Felix Geilert
 """
 
-from distutils.util import strtobool
 import logging
 import json
 import os
@@ -20,7 +19,7 @@ import functown as ft  # noqa: E402
 
 
 # retrieve the debug flag from the environment
-DEBUG = bool(strtobool(os.getenv("FUNC_DEBUG", "False")))
+DEBUG = ft.utils.get_flag("FUNC_DEBUG", False)
 
 
 @ft.ErrorHandler(
@@ -30,8 +29,10 @@ DEBUG = bool(strtobool(os.getenv("FUNC_DEBUG", "False")))
     enable_logger=True,
     return_logs=True,
 )
+@ft.ArgsHandler()
 def main(
     req: func.HttpRequest,
+    args: ft.RequestArgHandler,
     logger: logging.Logger,
     logs: List[str],
     **kwargs,
@@ -40,9 +41,6 @@ def main(
 
     # create a logger (allow to return log as list)
     logger.info(f"Using functown v{ft.__version__}")
-
-    # generate args parser
-    args = ft.RequestArgHandler(req)
 
     # check different parameters
     body_param = args.get_body("body_param", required=False, default="no body param")
