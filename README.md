@@ -76,6 +76,10 @@ or the token does not contain the required scopes.
 Be sure to check out the [docs](docs/overview.md) for a full overview of all
 decorators.
 
+If you want to test it on your own Azure Subscription, you can check out the
+[example guide](docs/dev-guide.md#setting-up-the-function-app) in the dev section of the
+docs.
+
 🎷 Welcome to FuncTown! 🎷
 
 ## Note
