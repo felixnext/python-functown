@@ -141,3 +141,8 @@ def main(req: HttpRequest, tracer: TracerObject, **kwargs) -> HttpResponse:
     with tracer.span("my_span"):
         # ...
 ```
+
+## Infrastructure
+
+Make sure to check out the [development guide](dev-guide.md) to see how to setup
+the [example Function](../example) and how to view metrics in Application Insights.

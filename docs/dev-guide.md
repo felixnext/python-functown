@@ -139,3 +139,14 @@ your functions app.
 **Be Aware:** That metrics can be kept in memeory for multiple function runs. That means
 that executing the integration test multiple times might yield errors in the `metrics`
 related tests.
+
+**Insight Metrics**
+
+Once you have deployed and run everything you should be able to see the metrics in the
+Azure Portal:
+
+![Metrics](../assets/example_insights_metrics.png)
+
+As well as logging for custom events and traces:
+
+![Logs](../assets/example_insights_events.png)
