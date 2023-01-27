@@ -1,7 +1,10 @@
 # 🎷 FuncTown 🎷
 
 [![PyPI Version](https://img.shields.io/pypi/v/functown.svg)](https://pypi.python.org/pypi/functown)
+[![PyPI downloads](https://img.shields.io/pypi/dm/functown.svg)](https://pypistats.org/packages/functown)
 ![Packaging](https://github.com/felixnext/python-functown/actions/workflows/python-package.yml/badge.svg)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/functown.svg?logo=python&logoColor=FFE873)](https://pypi.org/project/functown/)
+[![Code style: Black](https://img.shields.io/badge/code%20style-Black-000000.svg)](https://github.com/psf/black)
 
 `FuncTown` is a python library that is designed to make your life with Azure Functions easier.
 
