@@ -69,6 +69,7 @@ class JsonRequest(DeserializationDecorator):
         mime = RequestArgHandler(req).get_header(
             HeaderEnum.content_type, required=self._enforce
         )
+        mime = mime.split(";")[0]
         if self._enforce is True and mime != "application/json":
             raise RequestError(f"Request body must be JSON (is {mime}).", 400)
 
