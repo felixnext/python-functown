@@ -50,6 +50,8 @@ class JsonRequest(DeserializationDecorator):
 
     Args:
         func (Callable): The function to decorate.
+        enfore_mime (bool): Whether to enforce the mimetype check of the request body.
+            Defaults to `True`.
 
     Example:
         >>> @JsonRequest
@@ -57,13 +59,24 @@ class JsonRequest(DeserializationDecorator):
         ...     item = body["item"]
     """
 
-    def __init__(self, func=None, **kwargs):
+    def __init__(self, func=None, enfore_mime: bool = True, **kwargs):
         super().__init__(func, **kwargs)
+        self._enforce = enfore_mime
 
     def deserialize(self, req: HttpRequest, *args, **kwargs) -> Any:
+        # validate mimetype
+        if (
+            self._enforce is True
+            and req.headers.get("Content-Type") != "application/json"
+        ):
+            raise RequestError("Request body must be JSON.", 400)
+
+        # retrieve body and decode to string
         body = req.get_body()
         if isinstance(body, bytes):
             body = body.decode("utf-8")
         elif not isinstance(body, str):
             raise RequestError("Request body must be a string or bytes object.", 400)
+
+        # handle loading
         return json.loads(body)
