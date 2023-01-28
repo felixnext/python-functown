@@ -63,7 +63,7 @@ def test_logger_decorator(caplog, send_basics, callback, create_logger, clean_lo
     assert caplog.records[0].levelname == "WARNING"
     assert caplog.records[0].msg == (
         "No instrumentation key provided. "
-        "No data will be sent to Application Insights."
+        "No data will be sent to Application Insights (InsightsLogs)."
     )
 
     pos = 1

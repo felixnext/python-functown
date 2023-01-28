@@ -110,6 +110,41 @@ def main(
 See [insights-docs](insights.md) for more information.
 
 
+### Stacking Decorators
+
+All decorators can be stacked on top of each other. This allows you to combine
+different functionality in a single function.
+
+```python
+from functown.auth import AuthHandler, Token
+from functown.args import ArgsHandler, RequestArgHandler
+from functown.errors import ErrorHandler
+from functown.utils import StackDecorator
+
+def dec_config() -> StackDecorator:
+    return StackDecorator([
+        ErrorHandler(enable_logger=True),
+        AuthHandler(scopes=["user.read"]),
+        ArgsHandler()
+    ])
+
+@dec_config()
+def main(
+    req: HttpRequest, token: Token, args: RequestArgHandler, logger: Logger, **kwargs
+) -> HttpResponse:
+    # ...
+    logger.info(f"User: {token.user_id}")
+    # ...
+    args.get_body_query("data_name", required=True, allowed=["foo", "bar"])
+```
+
+This kind of stacking and configuration is helpful when you want to use the same set of
+decorators in multiple functions or even across different function projects.
+
+This is also highly recommended when you want to use the `functown.insights` module,
+since it allows you to configure the metrics and events that are logged in a single
+place.
+
 ## Help Developing
 
 `FuncTown` is an open source project and we welcome contributions!

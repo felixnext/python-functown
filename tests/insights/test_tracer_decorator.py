@@ -48,7 +48,7 @@ def test_tracer_decorator(caplog, rate):
     assert caplog.records[0].levelname == "WARNING"
     assert caplog.records[0].msg == (
         "No instrumentation key provided. "
-        "No data will be sent to Application Insights."
+        "No data will be sent to Application Insights (InsightsTracer)."
     )
 
     # check if rate is empty
