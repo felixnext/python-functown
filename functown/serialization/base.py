@@ -50,8 +50,17 @@ class SerializationDecorator(BaseDecorator):
         raise NotImplementedError
 
     def run(self, func, *args, **kwargs):
+        # execute inner function
         res = func(*args, **kwargs)
+
+        # get request object
         req = self._get("req", 0, *args, **kwargs)
+        if "req" in kwargs:
+            del kwargs["req"]
+        else:
+            args = args[1:]
+
+        # serialize result
         data, mtype = self.serialize(req, res, *args, **kwargs)
         return HttpResponse(
             data, status_code=self._code, headers=self._headers, mimetype=mtype
