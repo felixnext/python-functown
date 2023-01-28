@@ -20,7 +20,7 @@ def test_json_response():
     def main(req: HttpRequest) -> dict:
         return {"hello": "world"}
 
-    res = main(HttpRequest("GET", "http://localhost", body=None))
+    res = main(req=HttpRequest("GET", "http://localhost", body=None))
     assert isinstance(res, HttpResponse)
     assert res.mimetype == "application/json"
     assert json.loads(res.get_body()) == {"hello": "world"}
@@ -29,7 +29,7 @@ def test_json_response():
     def main(req: HttpRequest) -> dict:
         return {"hello": "world"}
 
-    res = main(HttpRequest("GET", "http://localhost", body=None))
+    res = main(req=HttpRequest("GET", "http://localhost", body=None))
     assert isinstance(res, HttpResponse)
     assert res.mimetype == "application/json"
     assert json.loads(res.get_body()) == {"hello": "world"}
@@ -38,7 +38,7 @@ def test_json_response():
     def main(req: HttpRequest) -> dict:
         return {"hello": "world"}
 
-    res = main(HttpRequest("GET", "http://localhost", body=None))
+    res = main(req=HttpRequest("GET", "http://localhost", body=None))
     assert isinstance(res, HttpResponse)
     assert res.mimetype == "application/json"
     assert res.status_code == 201
@@ -170,7 +170,7 @@ def test_json_request(
     if error:
         with pytest.raises(RequestError):
             res = main(
-                HttpRequest(
+                req=HttpRequest(
                     "GET",
                     "http://localhost",
                     body=body_data,
@@ -179,7 +179,7 @@ def test_json_request(
             )
     else:
         res = main(
-            HttpRequest(
+            req=HttpRequest(
                 "GET",
                 "http://localhost",
                 body=body_data,

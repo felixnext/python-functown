@@ -17,6 +17,11 @@ except Exception as ex:
     logging.error(f"Unable to load auth: {ex}")
 
 try:
+    from . import serialization
+except Exception as ex:
+    logging.error(f"Unable to load serialization: {ex}")
+
+try:
     from . import insights
     from .insights import (
         InsightsLogs,

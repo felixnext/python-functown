@@ -90,7 +90,16 @@ class DeserializationDecorator(BaseDecorator):
         raise NotImplementedError
 
     def run(self, func, *args, **kwargs):
+        # retrieve the request
         req = self._get("req", 0, *args, **kwargs)
+        if "req" in kwargs:
+            del kwargs["req"]
+        else:
+            args = args[1:]
+
+        # deserialize request body
         body = self.deserialize(req, *args, **kwargs)
         kwargs["body"] = body
-        return func(*args, **kwargs)
+
+        # execute inner function
+        return func(req=req, *args, **kwargs)
