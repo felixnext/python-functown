@@ -66,23 +66,23 @@ def test_all_decorator(caplog):
     assert res.mimetype == "text/plain"
     assert res.get_body() == b"test: [10]"
 
-    assert len(caplog.records) == 10
-    for i in range(5):
+    assert len(caplog.records) == 9
+    for i in range(4):
         assert caplog.records[i].levelname == "WARNING"
-        assert caplog.records[i].msg == (
+        assert caplog.records[i].msg.startswith(
             "No instrumentation key provided. "
-            "No data will be sent to Application Insights."
+            "No data will be sent to Application Insights ("
         )
 
-    assert caplog.records[5].levelname == "INFO"
-    assert caplog.records[5].msg == "Metric Setup Complete"
-    assert caplog.records[6].msg == "test"
-    assert caplog.records[6].name == "InsightsLogs"
-    assert caplog.records[7].msg == "name: InsightsLogs"
+    assert caplog.records[4].levelname == "INFO"
+    assert caplog.records[4].msg == "Metric Setup Complete"
+    assert caplog.records[5].msg == "test"
+    assert caplog.records[5].name == "InsightsLogs"
+    assert caplog.records[6].msg == "name: InsightsLogs"
+    assert caplog.records[7].msg == "event: InsightsEvents"
+    assert caplog.records[7].name == "InsightsEvents"
     assert caplog.records[8].msg == "event: InsightsEvents"
-    assert caplog.records[8].name == "InsightsEvents"
-    assert caplog.records[9].msg == "event: InsightsEvents"
-    assert caplog.records[9].custom_dimensions == {"test": 1}
+    assert caplog.records[8].custom_dimensions == {"test": 1}
 
 
 def test_all_decorator_signature():

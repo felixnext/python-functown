@@ -58,7 +58,7 @@ def test_events_decorator(caplog, callback, create_logger, clean_logger):
     assert caplog.records[0].levelname == "WARNING"
     assert caplog.records[0].msg == (
         "No instrumentation key provided. "
-        "No data will be sent to Application Insights."
+        "No data will be sent to Application Insights (InsightsEvents)."
     )
 
     pos = 1

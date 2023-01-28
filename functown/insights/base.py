@@ -13,7 +13,8 @@ class InsightsDecorator(BaseDecorator):
         if instrumentation_key is None:
             logging.warning(
                 "No instrumentation key provided. "
-                "No data will be sent to Application Insights."
+                "No data will be sent to Application Insights "
+                f"({self.__class__.__name__})."
             )
 
         self.instrumentation_key = instrumentation_key
