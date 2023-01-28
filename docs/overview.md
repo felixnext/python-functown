@@ -109,6 +109,13 @@ def main(
 
 See [insights-docs](insights.md) for more information.
 
+### `functown.serialization`
+
+Contains functionality to handle serialization of Request and Response objects. Each
+decorator extends from the `SerializationDecorator` and `DeserializationDecorator`
+baseclasses.
+
+See [serialization-docs](serialization.md) for more information.
 
 ### Stacking Decorators
 
