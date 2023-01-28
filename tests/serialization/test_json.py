@@ -71,6 +71,17 @@ def test_json_response():
             "foo",
             False,
         ),
+        # basic (dumped, encoded, charset)
+        (
+            True,
+            False,
+            {"foo": "bar"},
+            "application/json; charset=utf-8",
+            True,
+            True,
+            "foo",
+            False,
+        ),
         # basic (not dumped) - fail
         (
             True,
@@ -132,6 +143,7 @@ def test_json_response():
     ids=[
         "basic (dumped)",
         "basic (dumped, encoded)",
+        "basic (dumped, encoded, charset)",
         "basic (not dumped) - fail",
         "invalid mime - fail",
         "not plain",
