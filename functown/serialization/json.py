@@ -7,6 +7,7 @@ import json
 from typing import Any, Dict, Tuple, Union
 
 from azure.functions import HttpRequest
+from functown.args import RequestArgHandler, HeaderEnum
 from functown.errors import RequestError
 
 from .base import SerializationDecorator, DeserializationDecorator
@@ -35,7 +36,7 @@ class JsonResponse(SerializationDecorator):
         func=None,
         headers: Dict[str, str] = None,
         status_code: int = 200,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(func, headers, status_code, **kwargs)
 
@@ -65,11 +66,11 @@ class JsonRequest(DeserializationDecorator):
 
     def deserialize(self, req: HttpRequest, *args, **kwargs) -> Any:
         # validate mimetype
-        if (
-            self._enforce is True
-            and req.headers.get("Content-Type") != "application/json"
-        ):
-            raise RequestError("Request body must be JSON.", 400)
+        mime = RequestArgHandler(req).get_header(
+            HeaderEnum.content_type, required=self._enforce
+        )
+        if self._enforce is True and mime != "application/json":
+            raise RequestError(f"Request body must be JSON (is {mime}).", 400)
 
         # retrieve body and decode to string
         body = req.get_body()

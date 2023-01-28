@@ -42,6 +42,14 @@ class RequestArgHandler:
     def __init__(self, req: HttpRequest):
         self.req = req
 
+        # create a header-map
+        if req is None:
+            logging.warning("Request is None, no data will be available")
+            self._headers = {}
+        else:
+            headers = list(req.headers.keys())
+            self._headers = dict(zip([h.lower() for h in headers], headers))
+
     def _convert(
         self,
         name: str,
@@ -54,7 +62,7 @@ class RequestArgHandler:
     ) -> Optional[Union[Any, List[Any]]]:
         # check if required
         if required and arg is None:
-            raise ArgError(f"Argument {name} is not set, but required!")
+            raise ArgError(f"Argument {name} is not set, but required!", 400)
 
         # execute the mapping function (if set and arg is present)
         if map_fct is not None and arg is not None:
@@ -82,7 +90,7 @@ class RequestArgHandler:
             # check if value found
             if ls_arg not in allowed:
                 raise ArgError(
-                    f"Argument {name} should be one of {allowed} but got {arg}"
+                    f"Argument {name} should be one of {allowed} but got {arg}", 400
                 )
 
         return arg
@@ -183,17 +191,17 @@ class RequestArgHandler:
         try:
             file = self.req.files[name]
         except Exception as ex:
-            logging.warning(f"File {name} could not be parsed: {ex}")
+            logging.warning(f"File {name} could not be parsed: {ex}", 400)
 
         # check if provided
         if required and not file:
-            raise ArgError(f"File {name} could not be parsed")
+            raise ArgError(f"File {name} could not be parsed", 400)
 
         return file
 
     def get_header(
         self,
-        name: str,
+        name: Union[str, HeaderEnum],
         required: bool = False,
         map_fct: Callable[[str], Any] = None,
         allowed: Optional[List[Any]] = None,
@@ -204,5 +212,16 @@ class RequestArgHandler:
 
         Note: You can use `HeaderEnum` to get the correct header name
         """
+        # preprocess name
+        if isinstance(name, HeaderEnum):
+            name = name.value
+        name = self._headers.get(name.lower(), name)
+
+        # check if provided
         arg = self.req.headers.get(name)
+
+        if arg is None:
+            if required:
+                raise ArgError(f"Header {name} is required", 400)
+            return None
         return self._convert(name, arg, required, map_fct, allowed, list_map, default)
