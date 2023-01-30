@@ -3,7 +3,11 @@
 Serialization decorators allow to easily serialize and deserialize data to and from
 specific formats.
 
-## Serialization
+## JSON Decorators
+
+This is supported out of the box by `functown`.
+
+### Serialization
 
 In this case the `main` function will not return a `HttpResponse` object but a data
 object. The decorator will automatically serialize the data object to the specified
@@ -20,7 +24,7 @@ def main(req: HttpRequest):
 > Note: Currently only `JsonResponse` is implemented. But `SerializationDecorator` can
 > be easily extended to support other formats.
 
-## Deserialization
+### Deserialization
 
 In this case the `main` function will receive an additional `body` argument containing
 the deserialized data object. The decorator will automatically deserialize the request
@@ -37,3 +41,20 @@ def main(req: HttpRequest, body: dict):
 
 > Note: Currently only `JsonRequest` is implemented. But `DeserializationDecorator` can
 > be easily extended to support other formats.
+
+
+## Protocol Buffers Decorators
+
+This requires an extra package to pull in protobuf dependencies:
+
+```bash
+pip install functown[protobuf]
+```
+
+### Serialization
+
+TODO
+
+### Deserialization
+
+TODO

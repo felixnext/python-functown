@@ -1,2 +1,7 @@
 include README.md
 include requirements.txt
+include requirements-flatbuffer.txt
+include requirements-protobuf.txt
+include requirements-jwt.txt
+include requirements-insights.txt
+include requirements-pandas.txt

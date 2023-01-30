@@ -23,8 +23,16 @@ def versions_in_requirements(file):
 
 
 HERE = pathlib.Path(__file__).parent
-with open(HERE / "requirements.txt") as f:
-    required_list = versions_in_requirements(f)
+
+
+def load_req(extra: str = None):
+    file = "requirements.txt"
+    if extra:
+        file = f"requirements-{extra}.txt"
+    with open(HERE / file) as f:
+        required_list = versions_in_requirements(f)
+    return required_list
+
 
 setup(
     name="functown",
@@ -37,10 +45,19 @@ setup(
     download_url="https://github.com/felixnext/python-functown/releases/tag/v0.1.0-alpha",
     author="Felix Geilert",
     license="MIT License",
-    packages=find_packages(include=["functown", "functown.*"]),
-    install_requires=required_list,
+    packages=find_packages(
+        include=["functown", "functown.*"],
+    ),
+    install_requires=load_req(),
     setup_requires=["pytest-runner", "flake8"],
-    tests_require=["pytest"],
+    tests_require=load_req("test"),
+    extras_require={
+        "flatbuffer": load_req("flatbuffer"),
+        "protobuf": load_req("protobuf"),
+        "insights": load_req("insights"),
+        "jwt": load_req("jwt"),
+        "pandas": load_req("pandas"),
+    },
     include_package_data=True,
     zip_safe=False,
     classifiers=[
@@ -52,5 +69,6 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
 )

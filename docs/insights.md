@@ -1,5 +1,11 @@
 # Application Insights Metrics
 
+To make sure all dependencies are loaded, please install:
+
+```bash
+pip install functown[insights]
+```
+
 The exposed functionality of Application Insights can be splitted into four categories.
 Each of the categories have their own decorator that exposes the functionality.
 However, the combined functionality can also be access through the `Insights` decorator:
