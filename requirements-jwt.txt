@@ -1,0 +1,4 @@
+
+# used for JWT
+cryptography>=36.0.2
+python-jose>=3.3.0

@@ -1,0 +1,21 @@
+// Before use this should be compiled to python (in the parent dir)
+// flatc --python -o ./tests/serialization/resources ./tests/serialization/resources/example.fbs
+namespace functown.example;
+
+enum Importance:byte { High = 0, Medium = 1, Low = 2 }
+
+table Information {
+  msg:string;
+  id:int;
+  score:float;
+  data:[SubInfo];
+}
+
+table SubInfo {
+  msg: string;
+  type: Importance;
+}
+
+table InformationList {
+  infos: [Information];
+}

@@ -1,5 +1,11 @@
 # Authorization
 
+To make sure all dependencies are loaded, please install:
+
+```bash
+pip install functown[jwt]
+```
+
 The authorization decorator allows to restrict access to your function to requests that
 provide a valid bearer token. This JWT token can then be parsed and returned as a
 `Token` object.

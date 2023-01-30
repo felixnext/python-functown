@@ -38,6 +38,20 @@ class HeaderEnum(str, Enum):
     x_forwarded_url = "X-Forwarded-Url"
 
 
+class ContentTypes(str, Enum):
+    """List of Content Types to be used in typed way"""
+
+    json = "application/json"
+    xml = "application/xml"
+    parquet = "application/parquet"
+    csv = "text/csv"
+    html = "text/html"
+    text = "text/plain"
+    form = "application/x-www-form-urlencoded"
+    multipart = "multipart/form-data"
+    binary = "application/octet-stream"
+
+
 class RequestArgHandler:
     def __init__(self, req: HttpRequest):
         self.req = req

@@ -7,7 +7,7 @@ import json
 from typing import Any, Dict, Tuple, Union
 
 from azure.functions import HttpRequest
-from functown.args import RequestArgHandler, HeaderEnum
+from functown.args import RequestArgHandler, HeaderEnum, ContentTypes
 from functown.errors import RequestError
 
 from .base import SerializationDecorator, DeserializationDecorator
@@ -43,7 +43,7 @@ class JsonResponse(SerializationDecorator):
     def serialize(
         self, req: HttpRequest, res: Any, *args, **kwargs
     ) -> Tuple[Union[bytes, str], str]:
-        return json.dumps(res), "application/json"
+        return json.dumps(res), ContentTypes.json
 
 
 class JsonRequest(DeserializationDecorator):
@@ -69,8 +69,10 @@ class JsonRequest(DeserializationDecorator):
         mime = RequestArgHandler(req).get_header(
             HeaderEnum.content_type, required=self._enforce
         )
-        mime = mime.split(";")[0]
-        if self._enforce is True and mime != "application/json":
+        # FIXME: handle none mimetype
+        mime = mime.split(";")[0].lower()
+
+        if self._enforce is True and mime != ContentTypes.json.value.lower():
             raise RequestError(f"Request body must be JSON (is {mime}).", 400)
 
         # retrieve body and decode to string

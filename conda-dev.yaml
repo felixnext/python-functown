@@ -7,8 +7,9 @@ dependencies:
     - pip
     - pip:
         - -r requirements.txt
-        - pytest
-        - pytest-cov
-        - pytest-mock
-        - pytest-xdist
-        - pytest-forked
+        - -r requirements-test.txt
+        - -r requirements-insights.txt
+        - -r requirements-flatbuffer.txt
+        - -r requirements-protobuf.txt
+        - -r requirements-jwt.txt
+        - -r requirements-pandas.txt

@@ -6,16 +6,22 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/functown.svg?logo=python&logoColor=FFE873)](https://pypi.org/project/functown/)
 [![Code style: Black](https://img.shields.io/badge/code%20style-Black-000000.svg)](https://github.com/psf/black)
 
-`FuncTown` is a python library that is designed to make your life with Azure Functions easier.
+`FuncTown` is a python library that is designed to make your life with Azure Functions
+easier.
 
 The core features of `FuncTown` are:
 
 * **Error handling** - automatically handle errors and return a response to the user
-* **Debugging** - Set debug flags that automatically return logs and traces as part of error responses from your function
-* **JWT token validation** - automatically validate JWT tokens and provide the user information
-* **Request argument parsing** - automatically parse arguments from the `HttpRequest` and provide them to your function
-* **Metrics** - Handle connections to Application Insights and gives you easy to use metrics objects
-* **Logging, Tracing & Events** - Log your functions data directly into Application Insights
+* **Debugging** - Set debug flags that automatically return logs and traces as part of
+error responses from your function
+* **JWT token validation** - automatically validate JWT tokens and provide the user
+information
+* **Request argument parsing** - automatically parse arguments from the `HttpRequest`
+and provide them to your function
+* **Metrics** - Handle connections to Application Insights and gives you easy to use
+metrics objects
+* **Logging, Tracing & Events** - Log your functions data directly into Application
+Insights
 
 For detailed features see the [docs](docs/overview.md).
 
@@ -26,6 +32,9 @@ You can install `FuncTown` using `pip`:
 ```bash
 pip install functown
 ```
+
+> Note that some dependencies are hidden behind sub-packages (e.g. `functown[jwt]` for
+> JWT token validation).
 
 Almost all functionality of `FuncTown` is provided through decorators.
 If you want to add error handling to your function:

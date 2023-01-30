@@ -8,6 +8,7 @@ from typing import Any, Dict, Tuple, Union
 
 from azure.functions import HttpResponse, HttpRequest
 
+from functown.args import ContentTypes
 from functown.utils import BaseDecorator
 
 
@@ -62,6 +63,8 @@ class SerializationDecorator(BaseDecorator):
 
         # serialize result
         data, mtype = self.serialize(req, res, *args, **kwargs)
+        if isinstance(mtype, ContentTypes):
+            mtype = mtype.value
         return HttpResponse(
             data, status_code=self._code, headers=self._headers, mimetype=mtype
         )

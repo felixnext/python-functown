@@ -4,6 +4,9 @@
 
 azure-functions
 # functown
+# functown[insights]
+# functown[protobuf]
+# functown[flatbuffer]
 time-helper
 
 # adding temporary deps for development testing
@@ -15,3 +18,5 @@ python-jose>=3.3.0
 
 # used for metrics
 opencensus-ext-azure>=1.1.8
+
+# for
