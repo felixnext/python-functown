@@ -98,6 +98,9 @@ def test_protobuf_response(json_data):
     assert isinstance(res, HttpResponse)
     assert res.mimetype == "application/octet-stream"
     assert res.get_body() == item.SerializeToString()
+    body_item = pb2.InformationList()
+    body_item.ParseFromString(res.get_body())
+    assert body_item == item
 
 
 def test_protobuf_request(json_data):
@@ -173,3 +176,4 @@ def test_protobuf_request(json_data):
         )
     )
     assert type(res) == pb2.InformationList
+    assert res == item

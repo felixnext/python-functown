@@ -96,8 +96,8 @@ class ProtobufRequest(DeserializationDecorator):
     def __init__(
         self,
         pb_class: Any,
-        enforce_mime: bool = False,
-        allow_json: bool = False,
+        enforce_mime: bool = True,
+        allow_json: bool = True,
         **kwargs,
     ):
         super().__init__(None, **kwargs)
