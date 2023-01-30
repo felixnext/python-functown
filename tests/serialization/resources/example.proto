@@ -25,3 +25,8 @@ message Information {
 }
 
 message InformationList { repeated Information infos = 1; }
+
+message OtherData {
+  int32 uid = 1;
+  optional string data_field = 2;
+}

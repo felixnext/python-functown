@@ -64,7 +64,7 @@ class ProtobufResponse(SerializationDecorator):
         if self._pb_class is not None:
             # check if json or list and convert
             if self._allow_json is True and isinstance(res, (list, dict)):
-                # TODO: implement
+                # FIXME: implement
                 raise NotImplementedError("JSON serialization not implemented yet")
             elif not isinstance(res, self._pb_class):
                 raise ValueError(f"Response is not of type {self._pb_class.__name__}")
@@ -96,7 +96,7 @@ class ProtobufRequest(DeserializationDecorator):
     def __init__(
         self,
         pb_class: Any,
-        enfore_mime: bool = False,
+        enforce_mime: bool = False,
         allow_json: bool = False,
         **kwargs,
     ):
@@ -107,7 +107,7 @@ class ProtobufRequest(DeserializationDecorator):
             raise ValueError("Provided class does not have a ParseFromString method")
 
         # set data
-        self._enforce = enfore_mime
+        self._enforce = enforce_mime
         self._pb_class = pb_class
         self._allow_json = allow_json
 
@@ -116,12 +116,11 @@ class ProtobufRequest(DeserializationDecorator):
         mime = RequestArgHandler(req).get_header(
             HeaderEnum.content_type, required=self._enforce
         )
-        # FIXME: handle none mimetype
-        mime = mime.split(";")[0].lower()
+        mime = mime.split(";")[0].lower() if mime is not None else None
 
         # check for json data
         if mime == ContentTypes.json.value.lower() and self._allow_json is True:
-            # TODO: implement
+            # FIXME: implement
             raise NotImplementedError("JSON deserialization not implemented yet")
 
         # check for hard request
@@ -130,9 +129,12 @@ class ProtobufRequest(DeserializationDecorator):
 
         # retrieve body and decode to string
         body = req.get_body()
-        if isinstance(body, bytes):
-            body = body.decode("utf-8")
-        elif not isinstance(body, str):
-            raise RequestError("Request body must be a string or bytes object.", 400)
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        elif not isinstance(body, bytes):
+            raise RequestError("Request body must be a str or bytes object.", 400)
 
-        return self._pb_class.ParseFromString(body)
+        # FEAT: enable deeper parsing check
+        pb_item = self._pb_class()
+        pb_item.ParseFromString(body)
+        return pb_item
