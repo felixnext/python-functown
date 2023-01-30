@@ -3,6 +3,7 @@
 Copyright (c) 2023, Felix Geilert
 """
 
+import json
 
 from azure.functions import HttpRequest, HttpResponse
 import pytest
@@ -12,7 +13,25 @@ from functown.serialization import ProtobufResponse, ProtobufRequest
 from .resources import example_pb2 as pb2
 
 
-def test_protobuf_response():
+@pytest.fixture()
+def json_data():
+    return {
+        "infos": [
+            {
+                "msg": "Hello World",
+                "id": 1,
+                "score": 0.5,
+                "data": [
+                    {"msg": "Hello World 0", "type": "HIGH"},
+                    {"msg": "Hello World 1", "type": "HIGH"},
+                    {"msg": "Hello World 2", "type": "HIGH"},
+                ],
+            }
+        ]
+    }
+
+
+def test_protobuf_response(json_data):
     """Tests protobuf response serialization."""
     # generate
     item = pb2.InformationList()
@@ -69,10 +88,19 @@ def test_protobuf_response():
     with pytest.raises(ValueError):
         main(req=HttpRequest("GET", "http://localhost", body=None))
 
-    # TODO: validate JSON serialization
+    # validate JSON serialization
+
+    @ProtobufResponse(pb_class=pb2.InformationList, allow_json=True)
+    def main(req: HttpRequest) -> pb2.InformationList:
+        return json_data
+
+    res = main(req=HttpRequest("GET", "http://localhost", body=None))
+    assert isinstance(res, HttpResponse)
+    assert res.mimetype == "application/octet-stream"
+    assert res.get_body() == item.SerializeToString()
 
 
-def test_protobuf_request():
+def test_protobuf_request(json_data):
     """Tests protobuf request serialization."""
     # generate
     item = pb2.InformationList()
@@ -131,4 +159,17 @@ def test_protobuf_request():
     assert type(res) == pb2.InformationList
     assert res == item
 
-    # TODO: handle json requests
+    # handle json requests
+    @ProtobufRequest(pb_class=pb2.InformationList, allow_json=True)
+    def main(req: HttpRequest, body: pb2.InformationList) -> pb2.InformationList:
+        return body
+
+    res = main(
+        req=HttpRequest(
+            "GET",
+            "http://localhost",
+            body=json.dumps(json_data),
+            headers={"Content-Type": "application/json"},
+        )
+    )
+    assert type(res) == pb2.InformationList

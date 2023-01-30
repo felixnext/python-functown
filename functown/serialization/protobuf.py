@@ -8,6 +8,7 @@ from typing import Any, Dict, Tuple, Union
 from azure.functions import HttpRequest
 from functown.args import RequestArgHandler, HeaderEnum, ContentTypes
 from functown.errors import RequestError
+from google.protobuf import json_format
 
 from .base import SerializationDecorator, DeserializationDecorator
 
@@ -64,8 +65,7 @@ class ProtobufResponse(SerializationDecorator):
         if self._pb_class is not None:
             # check if json or list and convert
             if self._allow_json is True and isinstance(res, (list, dict)):
-                # FIXME: implement
-                raise NotImplementedError("JSON serialization not implemented yet")
+                res = json_format.ParseDict(res, self._pb_class())
             elif not isinstance(res, self._pb_class):
                 raise ValueError(f"Response is not of type {self._pb_class.__name__}")
 
@@ -120,8 +120,12 @@ class ProtobufRequest(DeserializationDecorator):
 
         # check for json data
         if mime == ContentTypes.json.value.lower() and self._allow_json is True:
-            # FIXME: implement
-            raise NotImplementedError("JSON deserialization not implemented yet")
+            body = req.get_body()
+            if isinstance(body, str):
+                body = body.encode("utf-8")
+            pb_item = self._pb_class()
+            json_format.Parse(body, pb_item)
+            return pb_item
 
         # check for hard request
         if self._enforce is True and mime != ContentTypes.binary.value.lower():
