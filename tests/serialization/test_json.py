@@ -82,6 +82,17 @@ def test_json_response():
             "foo",
             False,
         ),
+        # basic (dumped, encoded, no mime)
+        (
+            False,
+            False,
+            {"foo": "bar"},
+            None,
+            True,
+            True,
+            "foo",
+            False,
+        ),
         # basic (not dumped) - fail
         (
             True,
@@ -144,6 +155,7 @@ def test_json_response():
         "basic (dumped)",
         "basic (dumped, encoded)",
         "basic (dumped, encoded, charset)",
+        "basic (dumped, encoded, no mime)",
         "basic (not dumped) - fail",
         "invalid mime - fail",
         "not plain",
