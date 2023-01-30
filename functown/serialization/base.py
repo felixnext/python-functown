@@ -77,8 +77,9 @@ class DeserializationDecorator(BaseDecorator):
     deserialized request body.
     """
 
-    def __init__(self, func=None, **kwargs):
-        super().__init__(func, ["body"], **kwargs)
+    def __init__(self, func=None, keyword="body", **kwargs):
+        super().__init__(func, [keyword], **kwargs)
+        self._kw = keyword
 
     @abstractmethod
     def deserialize(self, req: HttpRequest, *args, **kwargs) -> Any:
@@ -102,7 +103,7 @@ class DeserializationDecorator(BaseDecorator):
 
         # deserialize request body
         body = self.deserialize(req, *args, **kwargs)
-        kwargs["body"] = body
+        kwargs[self._kw] = body
 
         # execute inner function
         return func(req=req, *args, **kwargs)
