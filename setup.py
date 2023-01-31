@@ -3,6 +3,7 @@ from setuptools import setup
 from setuptools import find_packages
 from functown import __version__
 import pathlib
+from glob import glob
 
 
 __status__ = "Package"
@@ -25,7 +26,19 @@ def versions_in_requirements(file):
 HERE = pathlib.Path(__file__).parent
 
 
-def load_req(extra: str = None):
+def load_req(extra: str = None, all: bool = False):
+    if all is True:
+        reqs_files = glob(str(HERE / "requirements*.txt"))
+        reqs = []
+        for file in reqs_files:
+            with open(file) as f:
+                reqs += versions_in_requirements(f)
+
+        # make unique
+        reqs = list(set(reqs))
+        return reqs
+
+    # load regular requirements
     file = "requirements.txt"
     if extra:
         file = f"requirements-{extra}.txt"
@@ -50,7 +63,7 @@ setup(
     ),
     install_requires=load_req(),
     setup_requires=["pytest-runner", "flake8"],
-    tests_require=load_req("test"),
+    tests_require=load_req(all=True),
     extras_require={
         "flatbuffer": load_req("flatbuffer"),
         "protobuf": load_req("protobuf"),
