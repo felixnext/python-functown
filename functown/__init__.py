@@ -1,4 +1,4 @@
-__version__ = "1.2.0"
+__version__ = "2.0.0"
 
 import logging
 
@@ -14,7 +14,7 @@ try:
     from . import auth
     from .auth import AuthHandler
 except Exception as ex:
-    logging.error(f"Unable to load auth: {ex}")
+    logging.warning("Unable to load auth, please install `functown[jwt]`")
 
 try:
     from . import serialization
@@ -31,4 +31,4 @@ try:
         Insights,
     )
 except Exception as ex:
-    logging.error(f"Unable to load metrics: {ex}")
+    logging.warning("Unable to load metrics, please install `functown[insights]`")

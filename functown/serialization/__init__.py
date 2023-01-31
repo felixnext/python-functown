@@ -1,7 +1,6 @@
 import logging
 
 from .base import SerializationDecorator, DeserializationDecorator
-from .choice import ChoiceDecorator
 from .json import JsonResponse, JsonRequest
 
 try:
