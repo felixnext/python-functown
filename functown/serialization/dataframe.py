@@ -9,7 +9,8 @@ Copyright (c) 2023, Felix Geilert
 """
 
 from enum import Enum
-from typing import Any, Dict, Tuple, Union, Optional
+from io import StringIO, BytesIO
+from typing import Dict, Tuple, Union, Optional
 
 from azure.functions import HttpRequest
 import pandas as pd
@@ -50,7 +51,7 @@ class DataFrameResponse(SerializationDecorator):
         self,
         func=None,
         format=DataFrameFormat.CSV,
-        headers: Dict[str, str] = None,
+        headers: Optional[Dict[str, str]] = None,
         status_code: int = 200,
         allow_empty: bool = True,
         **kwargs,
@@ -71,6 +72,7 @@ class DataFrameResponse(SerializationDecorator):
         is_empty = res is None or res.empty
 
         # serialize dataframe according to format
+        # FIXME: update header and index infomration
         if self._format == DataFrameFormat.CSV:
             data = res.to_csv(index=False) if not is_empty else None
             mime = ContentTypes.CSV
@@ -111,7 +113,45 @@ class DataFrameRequest(DeserializationDecorator):
         super().__init__(func, keyword="df", **kwargs)
 
         self._fixed_format = fixed_format
-        self._enforce_mime = enforce_mime
+        self._enforce = enforce_mime
+        self._fixed_mime = {
+            DataFrameFormat.CSV: ContentTypes.CSV,
+            DataFrameFormat.JSON: ContentTypes.JSON,
+            DataFrameFormat.PARQUET: ContentTypes.BINARY,
+        }.get(fixed_format, None)
 
-    def deserialize(self, req: HttpRequest, *args, **kwargs) -> Any:
-        pass
+    def deserialize(self, req: HttpRequest, *args, **kwargs) -> pd.DataFrame:
+        # validate mime type
+        mime = RequestArgHandler(req).get_header(
+            HeaderEnum.CONTENT_TYPE, required=self._enforce
+        )
+        mime = mime.split(";")[0].lower() if mime is not None else None
+
+        # check for hard request
+        if self._enforce is True and mime != self._fixed_mime.value.lower():
+            raise RequestError(f"Request body must be octet-stream (is {mime}).", 400)
+
+        # normalize body
+        body = req.get_body()
+        if body is None:
+            return None
+        # NOTE: using lambdas for lazy evaluation
+        if isinstance(body, str):
+            body_str, body_bytes = lambda: body, lambda: body.encode("utf-8")
+        elif isinstance(body, bytes):
+            body_str, body_bytes = lambda: body.decode("utf-8"), lambda: body
+        else:
+            raise RequestError(f"Unsupported body type: {type(body)}", 400)
+
+        # parse dataframe
+        # FIXME: update header and index information
+        if mime == ContentTypes.CSV.value.lower():
+            df = pd.read_csv(StringIO(body_str()))
+        elif mime == ContentTypes.JSON.value.lower():
+            df = pd.read_json(StringIO(body_str()))
+        elif mime == ContentTypes.BINARY.value.lower():
+            df = pd.read_parquet(BytesIO(body_bytes()))
+        else:
+            raise RequestError(f"Unsupported content type: {mime}", 400)
+
+        return df
