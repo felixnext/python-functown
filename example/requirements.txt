@@ -19,4 +19,5 @@ python-jose>=3.3.0
 # used for metrics
 opencensus-ext-azure>=1.1.8
 
-# for
+# used for serialization
+protobuf

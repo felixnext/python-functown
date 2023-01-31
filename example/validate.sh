@@ -2,6 +2,9 @@
 # This script is used to validate the function app deployment
 # It serves as integration test
 
+# execute:
+# ./validate.sh --name <function app name> --key <function app key>
+
 # default values
 FAPP="functownexample"
 debug=false
@@ -207,10 +210,14 @@ hdl="TestInsightsMetrics"
 run_test_case "Metric" '{"counter": 10, "gauge": 5, "sum": 4}' "POST" "" "$hdl" "true" "logs|results.sleep_sec" "results.counter.hits:10|results.counter.data:[ 10 ]|results.gauge.data:[ 10 ]|results.sum.data:[ 6.5 ]"
 
 # --- Json Serialization ---
+echo_header "Json Serialization"
+hdl="TestJsonSerialization"
 
-# TODO: complete
+run_test_case "Json" '{"foo": "bar"}' "POST" "" "$hdl" "true" "" "foo:bar|processed:true"
 
 # --- Protobuf Serialization ---
+echo_header "Protobuf Serialization"
+hdl="TestProtobufSerialization"
 
 # TODO: complete
 
