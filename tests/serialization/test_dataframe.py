@@ -116,13 +116,12 @@ def test_dataframe_request(
         return df
 
     def serialize(df: pandas.DataFrame, ctype: DataFrameFormat) -> bytes:
-        # FIXME: update headers and index infromation
         if ctype == DataFrameFormat.CSV:
-            return df.to_csv().encode("utf-8")
+            return df.to_csv(index=False).encode("utf-8")
         elif ctype == DataFrameFormat.JSON:
-            return df.to_json().encode("utf-8")
+            return df.to_json(orient="records").encode("utf-8")
         elif ctype == DataFrameFormat.PARQUET:
-            return df.to_parquet()
+            return df.to_parquet(index=False)
 
     if send_body:
         headers = {"Content-Type": DF_MAP[ctype.value]} if send_mime else {}

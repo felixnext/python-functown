@@ -72,7 +72,6 @@ class DataFrameResponse(SerializationDecorator):
         is_empty = res is None or res.empty
 
         # serialize dataframe according to format
-        # FIXME: update header and index infomration
         if self._format == DataFrameFormat.CSV:
             data = res.to_csv(index=False) if not is_empty else None
             mime = ContentTypes.CSV
@@ -128,8 +127,12 @@ class DataFrameRequest(DeserializationDecorator):
         mime = mime.split(";")[0].lower() if mime is not None else None
 
         # check for hard request
-        if self._enforce is True and mime != self._fixed_mime.value.lower():
-            raise RequestError(f"Request body must be octet-stream (is {mime}).", 400)
+        if self._fixed_mime is not None and mime != self._fixed_mime.value.lower():
+            raise RequestError(
+                f"Request body must be {self._fixed_mime.value} (is {mime}).", 400
+            )
+        if self._enforce is True and mime is None:
+            raise RequestError("Request body must have a Content-Type header.", 400)
 
         # normalize body
         body = req.get_body()
@@ -144,7 +147,6 @@ class DataFrameRequest(DeserializationDecorator):
             raise RequestError(f"Unsupported body type: {type(body)}", 400)
 
         # parse dataframe
-        # FIXME: update header and index information
         if mime == ContentTypes.CSV.value.lower():
             df = pd.read_csv(StringIO(body_str()))
         elif mime == ContentTypes.JSON.value.lower():
