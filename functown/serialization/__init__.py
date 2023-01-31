@@ -17,6 +17,6 @@ except ImportError:
     logging.warning("Unable to load protobuf, please install `functown[protobuf]`")
 
 try:
-    from .dataframe import DataFrameResponse, DataFrameRequest
+    from .dataframe import DataFrameResponse, DataFrameRequest, DataFrameFormat
 except ImportError:
     logging.warning("Unable to load pandas, please install `functown[pandas]`")
