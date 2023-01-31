@@ -5,7 +5,7 @@ from .choice import ChoiceDecorator
 from .json import JsonResponse, JsonRequest
 
 try:
-    from .flatbuf import FlatbufResponse, FlatbufRequest
+    from .flatbuf import FlatbufferResponse, FlatbufferRequest
 except ImportError:
     logging.warning(
         "Unable to load flatbuffers, please install `functown[flatbuffers]`"
@@ -15,3 +15,8 @@ try:
     from .protobuf import ProtobufResponse, ProtobufRequest
 except ImportError:
     logging.warning("Unable to load protobuf, please install `functown[protobuf]`")
+
+try:
+    from .dataframe import DataFrameResponse, DataFrameRequest
+except ImportError:
+    logging.warning("Unable to load pandas, please install `functown[pandas]`")

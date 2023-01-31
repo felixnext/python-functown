@@ -8,41 +8,110 @@ Supporting the following formats:
 Copyright (c) 2023, Felix Geilert
 """
 
-from typing import Any, Dict, Tuple, Union
+from enum import Enum
+from typing import Any, Dict, Tuple, Union, Optional
 
 from azure.functions import HttpRequest
+import pandas as pd
 
-# import pandas as pd
-
-# from functown.args import ContentTypes, RequestArgHandler, HeaderEnum
-# from functown.errors import RequestError
+from functown.args import ContentTypes, RequestArgHandler, HeaderEnum
+from functown.errors import RequestError
 
 from .base import SerializationDecorator, DeserializationDecorator
 
 
+class DataFrameFormat(str, Enum):
+    """Supported DataFrame formats."""
+
+    CSV = "csv"
+    JSON = "json"
+    PARQUET = "parquet"
+
+
 class DataFrameResponse(SerializationDecorator):
-    """Provides a DataFrame serialized response for an Azure Function."""
+    """Provides a DataFrame serialized response for an Azure Function.
+
+    Args:
+        func (Callable): The function to decorate.
+        format (DataFrameFormat): The format to use for serialization. Defaults to
+            `DataFrameFormat.CSV`.
+        headers (Dict[str, str]): The headers to add to the response.
+        status_code (int): The status code of the response.
+        allow_empty (bool): Whether to allow empty dataframes as input. Defaults to
+            `True`.
+
+    Example:
+        >>> @DataFrameResponse
+        ... def main(req: HttpRequest) -> pd.DataFrame:
+        ...     return pd.DataFrame(...)
+    """
 
     def __init__(
         self,
         func=None,
+        format=DataFrameFormat.CSV,
         headers: Dict[str, str] = None,
         status_code: int = 200,
-        **kwargs
+        allow_empty: bool = True,
+        **kwargs,
     ):
         super().__init__(func, headers, status_code, **kwargs)
 
+        self._format = format
+        self._allow_empty = allow_empty
+
     def serialize(
-        self, req: HttpRequest, res: Any, *args, **kwargs
+        self, req: HttpRequest, res: pd.DataFrame, *args, **kwargs
     ) -> Tuple[Union[bytes, str], str]:
-        pass
+        # check if dataframe is valid
+        if not isinstance(res, pd.DataFrame):
+            raise ValueError(f"Response is not a valid DataFrame (is {type(res)})")
+        if self._allow_empty is False and (res is None or res.empty):
+            raise ValueError("Response is empty")
+        is_empty = res is None or res.empty
+
+        # serialize dataframe according to format
+        if self._format == DataFrameFormat.CSV:
+            data = res.to_csv(index=False) if not is_empty else None
+            mime = ContentTypes.CSV
+        elif self._format == DataFrameFormat.JSON:
+            data = res.to_json(orient="records") if not is_empty else None
+            mime = ContentTypes.JSON
+        elif self._format == DataFrameFormat.PARQUET:
+            data = res.to_parquet() if not is_empty else None
+            mime = ContentTypes.BINARY
+        else:
+            raise ValueError(f"Unsupported DataFrame format: {self._format}")
+
+        return data, mime
 
 
 class DataFrameRequest(DeserializationDecorator):
-    """Provides a DataFrame deserialized request for an Azure Function."""
+    """Provides a DataFrame deserialized request for an Azure Function.
 
-    def __init__(self, func=None, **kwargs):
+    This decorator will add a `df` keyword argument to the decorated function. This
+    argument will contain the deserialized DataFrame.
+
+    Args:
+        func (Callable): The function to decorate.
+        fixed_format (DataFrameFormat): The format to use for deserialization. If
+            `None`, the format will be determined from the `Content-Type` header.
+            Defaults to `None`.
+        enforce_mime (bool): Whether to enforce the `Content-Type` header to match
+            the format. Defaults to `False`.
+    """
+
+    def __init__(
+        self,
+        func=None,
+        fixed_format: Optional[DataFrameFormat] = None,
+        enforce_mime: bool = False,
+        **kwargs,
+    ):
         super().__init__(func, keyword="df", **kwargs)
+
+        self._fixed_format = fixed_format
+        self._enforce_mime = enforce_mime
 
     def deserialize(self, req: HttpRequest, *args, **kwargs) -> Any:
         pass
