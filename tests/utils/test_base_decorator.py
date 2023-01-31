@@ -10,7 +10,6 @@ from inspect import signature, Parameter
 from types import MappingProxyType
 
 from azure.functions import HttpRequest
-import pytest
 
 from functown.utils import BaseDecorator
 
