@@ -206,6 +206,14 @@ hdl="TestInsightsMetrics"
 
 run_test_case "Metric" '{"counter": 10, "gauge": 5, "sum": 4}' "POST" "" "$hdl" "true" "logs|results.sleep_sec" "results.counter.hits:10|results.counter.data:[ 10 ]|results.gauge.data:[ 10 ]|results.sum.data:[ 6.5 ]"
 
+# --- Json Serialization ---
+
+# TODO: complete
+
+# --- Protobuf Serialization ---
+
+# TODO: complete
+
 # --- Statistics ---
 # print pretty statistics about failed and successful tests
 echo ""

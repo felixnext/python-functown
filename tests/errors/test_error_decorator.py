@@ -6,6 +6,7 @@ import json
 import logging
 from types import MappingProxyType
 from typing import List
+import sys
 
 import pytest
 
@@ -219,13 +220,19 @@ def test_error_decorator_response(caplog, exc, method, body, return_errors):
         assert caplog.records[pos].levelname == "ERROR"
         assert caplog.records[pos + 1].levelname == "ERROR"
         assert caplog.records[pos + 2].message == "Trace:"
+        num = 164 if exc == TokenError else 173
+        if sys.version_info.minor <= 7:
+            num = 169 if exc == TokenError else 178
         assert caplog.records[pos + 3].message == (
-            f"- error_decorator.py:122:{'164' if exc == TokenError else '173'}"
+            f"- error_decorator.py:122:{num}"
             " - Vars: ('self', 'func', 'args', 'kwargs', 'logs', 'logger', 'ex')"
         )
-        assert (
-            caplog.records[pos + 4].message
-            == "- test_error_decorator.py:174:181 - Vars: ('req', 'params', 'kwargs')"
+        num = 182
+        if sys.version_info.minor <= 7:
+            num = 183
+        assert caplog.records[pos + 4].message == (
+            f"- test_error_decorator.py:175:{num} - Vars: ('req', 'params', "
+            "'kwargs')"
         )
         pos += 4
 
