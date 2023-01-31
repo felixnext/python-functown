@@ -150,3 +150,26 @@ Azure Portal:
 As well as logging for custom events and traces:
 
 ![Logs](../assets/example_insights_events.png)
+
+
+### Test the install
+
+You can test the installation process in a local environemnt:
+
+```bash
+# delete old conda environment if exists
+conda env remove -n test_env
+# create new conda environment
+conda create -n test_env python=3.7
+conda activate test_env
+
+# install the library from setup.py
+pip install .
+pip install ".[pandas]"
+pip install ".[flatbuffer]"
+pip install ".[protobuf]"
+pip install ".[insights]"
+```
+
+> Note that the quotes are required for zsh (and maybe other shells) to correctly
+> interpret the brackets.

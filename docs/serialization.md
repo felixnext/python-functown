@@ -58,3 +58,37 @@ TODO
 ### Deserialization
 
 TODO
+
+
+## Flatbuffers Decorators
+
+This requires an extra package to pull in flatbuffers dependencies:
+
+```bash
+pip install functown[flatbuffer]
+```
+
+### Serialization
+
+TODO
+
+### Deserialization
+
+TODO
+
+
+## Pandas Decorators
+
+This requires an extra package to pull in pandas dependencies:
+
+```bash
+pip install functown[pandas]
+```
+
+### Serialization
+
+TODO
+
+### Deserialization
+
+TODO
