@@ -53,7 +53,8 @@ pip install functown[protobuf]
 
 ### Serialization
 
-TODO
+This decorator can either take a `protobuf.Message` class or an instance of a json
+object
 
 ### Deserialization
 
