@@ -40,40 +40,35 @@ class FlatbufferResponse(SerializationDecorator):
         fb_class: Any = None,
         headers: Dict[str, str] = None,
         status_code: int = 200,
-        allow_json: bool = False,
         **kwargs,
     ):
         super().__init__(func, headers, status_code, **kwargs)
         self._fb_class = fb_class
-        self._allow_json = (
-            allow_json if allow_json is not None else fb_class is not None
-        )
 
     def serialize(
         self, req: HttpRequest, res: Any, *args, **kwargs
     ) -> Tuple[Union[bytes, str], str]:
         # check if already serialized
         if isinstance(res, bytes):
-            return res, ContentTypes.binary
+            return res, ContentTypes.BINARY
 
         # perform type check (if requested)
         if self._fb_class is not None:
-            # check if json or list and convert
-            if self._allow_json is True and isinstance(res, (list, dict)):
-                # FIXME: convert
-                raise NotImplementedError("JSON conversion not implemented yet")
-            elif not isinstance(res, self._fb_class):
+            if not isinstance(res, self._fb_class):
                 raise ValueError(f"Response is not of type {self._fb_class.__name__}")
 
         # check for SerializeToString method
         if not hasattr(res, "Output"):
             raise ValueError("Response does not have a Output method")
 
-        return bytes(res.Output()), "application/octet-stream"
+        return bytes(res.Output()), ContentTypes.BINARY
 
 
 class FlatbufferRequest(DeserializationDecorator):
     """Provides a Flatbuffer deserialized request for an Azure Function.
+
+    This decorator will add a new `body` argument to the decorated function. This
+    argument will contain the deserialized flatbuffer object.
 
     Args:
         fb_class (Any): The flatbuffer class to use for deserialization.
@@ -93,14 +88,12 @@ class FlatbufferRequest(DeserializationDecorator):
         self,
         fb_class: Any,
         enforce_mime: bool = True,
-        allow_json: bool = True,
         **kwargs,
     ):
         super().__init__(None, **kwargs)
 
         self._fb_class = fb_class
-        self._enforce_mime = enforce_mime
-        self._allow_json = allow_json
+        self._enforce = enforce_mime
 
         if self._fb_class is None:
             raise ValueError("fb_class must be set")
@@ -110,20 +103,12 @@ class FlatbufferRequest(DeserializationDecorator):
     def deserialize(self, req: HttpRequest, *args, **kwargs) -> Any:
         # validate mimetype
         mime = RequestArgHandler(req).get_header(
-            HeaderEnum.content_type, required=self._enforce
+            HeaderEnum.CONTENT_TYPE, required=self._enforce
         )
         mime = mime.split(";")[0].lower() if mime is not None else None
 
-        # check for json data
-        if mime == ContentTypes.json.value.lower() and self._allow_json is True:
-            body = req.get_body()
-            if isinstance(body, str):
-                body = body.encode("utf-8")
-            # FIXME: implement
-            raise NotImplementedError("JSON conversion not implemented yet")
-
         # check for hard request
-        if self._enforce is True and mime != ContentTypes.binary.value.lower():
+        if self._enforce is True and mime != ContentTypes.BINARY.value.lower():
             raise RequestError(f"Request body must be octet-stream (is {mime}).", 400)
 
         # retrieve body and decode to string
@@ -133,4 +118,6 @@ class FlatbufferRequest(DeserializationDecorator):
         elif not isinstance(body, bytes):
             raise RequestError("Request body must be a str or bytes object.", 400)
 
-        # FIXME: generate the response object
+        # generate the response object
+        item = self._fb_class.GetRootAs(bytearray(body), 0)
+        return item

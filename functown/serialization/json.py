@@ -43,11 +43,14 @@ class JsonResponse(SerializationDecorator):
     def serialize(
         self, req: HttpRequest, res: Any, *args, **kwargs
     ) -> Tuple[Union[bytes, str], str]:
-        return json.dumps(res), ContentTypes.json
+        return json.dumps(res), ContentTypes.JSON
 
 
 class JsonRequest(DeserializationDecorator):
     """Provides a JSON deserialized request for an Azure Function.
+
+    This will add a `body` argument to the decorated function, which will contain the
+    deserialized JSON body of the request.
 
     Args:
         func (Callable): The function to decorate.
@@ -67,11 +70,11 @@ class JsonRequest(DeserializationDecorator):
     def deserialize(self, req: HttpRequest, *args, **kwargs) -> Any:
         # validate mimetype
         mime = RequestArgHandler(req).get_header(
-            HeaderEnum.content_type, required=self._enforce
+            HeaderEnum.CONTENT_TYPE, required=self._enforce
         )
         mime = mime.split(";")[0].lower() if mime is not None else None
 
-        if self._enforce is True and mime != ContentTypes.json.value.lower():
+        if self._enforce is True and mime != ContentTypes.JSON.value.lower():
             raise RequestError(f"Request body must be JSON (is {mime}).", 400)
 
         # retrieve body and decode to string

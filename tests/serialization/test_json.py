@@ -9,6 +9,7 @@ from typing import Any
 from azure.functions import HttpRequest, HttpResponse
 import pytest
 
+from functown.args import HeaderEnum, ContentTypes
 from functown.errors import RequestError
 from functown.serialization import JsonResponse, JsonRequest
 
@@ -20,7 +21,14 @@ def test_json_response():
     def main(req: HttpRequest) -> dict:
         return {"hello": "world"}
 
-    res = main(req=HttpRequest("GET", "http://localhost", body=None))
+    res = main(
+        req=HttpRequest(
+            "GET",
+            "http://localhost",
+            body=None,
+            headers={HeaderEnum.CONTENT_TYPE: ContentTypes.JSON},
+        )
+    )
     assert isinstance(res, HttpResponse)
     assert res.mimetype == "application/json"
     assert json.loads(res.get_body()) == {"hello": "world"}

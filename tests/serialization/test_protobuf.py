@@ -8,27 +8,10 @@ import json
 from azure.functions import HttpRequest, HttpResponse
 import pytest
 
+from functown.args import ContentTypes, HeaderEnum
 from functown.errors import ArgError, RequestError
 from functown.serialization import ProtobufResponse, ProtobufRequest
 from .resources import example_pb2 as pb2
-
-
-@pytest.fixture()
-def json_data():
-    return {
-        "infos": [
-            {
-                "msg": "Hello World",
-                "id": 1,
-                "score": 0.5,
-                "data": [
-                    {"msg": "Hello World 0", "type": "HIGH"},
-                    {"msg": "Hello World 1", "type": "HIGH"},
-                    {"msg": "Hello World 2", "type": "HIGH"},
-                ],
-            }
-        ]
-    }
 
 
 def test_protobuf_response(json_data):
@@ -116,7 +99,7 @@ def test_protobuf_request(json_data):
         d.msg = f"Hello World {i}"
         d.type = pb2.Information.Importance.HIGH
 
-    @ProtobufRequest(pb_class=pb2.InformationList)
+    @ProtobufRequest(pb_class=pb2.InformationList, enforce_mime=False)
     def main(req: HttpRequest, body: pb2.InformationList) -> pb2.InformationList:
         return body
 
@@ -136,7 +119,7 @@ def test_protobuf_request(json_data):
     #    main(req=HttpRequest("GET", "http://localhost", body=item.SerializeToString()))
 
     # test enforcement of mime
-    @ProtobufRequest(pb_class=pb2.InformationList, enforce_mime=True)
+    @ProtobufRequest(pb_class=pb2.InformationList, enforce_mime=True, allow_json=False)
     def main(req: HttpRequest, body: pb2.InformationList) -> pb2.InformationList:
         return body
 
@@ -148,7 +131,7 @@ def test_protobuf_request(json_data):
                 "GET",
                 "http://localhost",
                 body=item.SerializeToString(),
-                headers={"Content-Type": "application/json"},
+                headers={HeaderEnum.CONTENT_TYPE: ContentTypes.JSON},
             )
         )
     res = main(
@@ -156,7 +139,7 @@ def test_protobuf_request(json_data):
             "GET",
             "http://localhost",
             body=item.SerializeToString(),
-            headers={"Content-Type": "application/octet-stream"},
+            headers={HeaderEnum.CONTENT_TYPE: ContentTypes.BINARY},
         )
     )
     assert type(res) == pb2.InformationList
@@ -172,7 +155,7 @@ def test_protobuf_request(json_data):
             "GET",
             "http://localhost",
             body=json.dumps(json_data),
-            headers={"Content-Type": "application/json"},
+            headers={HeaderEnum.CONTENT_TYPE: ContentTypes.JSON},
         )
     )
     assert type(res) == pb2.InformationList

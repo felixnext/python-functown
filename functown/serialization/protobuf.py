@@ -59,7 +59,7 @@ class ProtobufResponse(SerializationDecorator):
     ) -> Tuple[Union[bytes, str], str]:
         # check if already serialized
         if isinstance(res, bytes):
-            return res, ContentTypes.binary
+            return res, ContentTypes.BINARY
 
         # perform type check (if requested)
         if self._pb_class is not None:
@@ -73,11 +73,14 @@ class ProtobufResponse(SerializationDecorator):
         if not hasattr(res, "SerializeToString"):
             raise ValueError("Response does not have a SerializeToString method")
 
-        return res.SerializeToString(), "application/octet-stream"
+        return res.SerializeToString(), ContentTypes.BINARY
 
 
 class ProtobufRequest(DeserializationDecorator):
     """Provides a Protobuf deserialized request for an Azure Function.
+
+    This decorator will add a `body` argument to the decorated function. This argument
+    will contain the deserialized protobuf object.
 
     Args:
         func (Callable): The function to decorate.
@@ -114,12 +117,12 @@ class ProtobufRequest(DeserializationDecorator):
     def deserialize(self, req: HttpRequest, *args, **kwargs) -> Any:
         # validate mimetype
         mime = RequestArgHandler(req).get_header(
-            HeaderEnum.content_type, required=self._enforce
+            HeaderEnum.CONTENT_TYPE, required=self._enforce
         )
         mime = mime.split(";")[0].lower() if mime is not None else None
 
         # check for json data
-        if mime == ContentTypes.json.value.lower() and self._allow_json is True:
+        if mime == ContentTypes.JSON.value.lower() and self._allow_json is True:
             body = req.get_body()
             if isinstance(body, str):
                 body = body.encode("utf-8")
@@ -128,7 +131,7 @@ class ProtobufRequest(DeserializationDecorator):
             return pb_item
 
         # check for hard request
-        if self._enforce is True and mime != ContentTypes.binary.value.lower():
+        if self._enforce is True and mime != ContentTypes.BINARY.value.lower():
             raise RequestError(f"Request body must be octet-stream (is {mime}).", 400)
 
         # retrieve body and decode to string
