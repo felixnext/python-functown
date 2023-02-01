@@ -28,7 +28,7 @@ try:
         InsightsMetrics,
         InsightsEvents,
         InsightsTracer,
-        Insights,
+        insights,
     )
 except Exception as ex:
     logging.warning("Unable to load metrics, please install `functown[insights]`")

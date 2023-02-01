@@ -11,10 +11,10 @@ Each of the categories have their own decorator that exposes the functionality.
 However, the combined functionality can also be access through the `Insights` decorator:
 
 ```python
-from functown.insights import Insights, TracerObject, MetricSpec, MetricHandler, MetricType
+from functown.insights import insights, TracerObject, MetricSpec, MetricHandler, MetricType
 from functown.utils import get_config
 
-@Insights(
+@insights(
     instrumentation_key=get_config("APPIN_KEY"),
     enable_logger=True, enable_events=True, enable_tracer=True, enable_metrics=True,
     metrics=[

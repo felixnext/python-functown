@@ -20,4 +20,4 @@ from .logger_decorator import InsightsLogs
 from .event_decorator import InsightsEvents
 from .tracer_decorator import InsightsTracer, TracerObject
 from .metric_decorator import InsightsMetrics
-from .all_decorator import Insights
+from .all_decorator import insights
