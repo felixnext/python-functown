@@ -20,4 +20,4 @@ python-jose>=3.3.0
 opencensus-ext-azure>=1.1.8
 
 # used for serialization
-protobuf
+protobuf>=4.21.12

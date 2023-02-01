@@ -8,7 +8,7 @@ from inspect import signature
 
 from azure.functions import HttpRequest, HttpResponse
 
-from functown import insights
+from functown import Insights
 from functown.insights import (
     TracerObject,
     MetricHandler,
@@ -21,7 +21,7 @@ def test_all_decorator(caplog):
     """Tests the InsightsLogger decorator"""
     # FEAT: create proper mocking of AzureLogExporter (to test against filter)
     # create the decorator
-    @insights(
+    @Insights(
         instrumentation_key=None,
         enable_logger=True,
         send_basics=True,
@@ -88,7 +88,7 @@ def test_all_decorator(caplog):
 def test_all_decorator_signature():
     """Tests the InsightsLogger decorator"""
     # create the decorator
-    @insights(
+    @Insights(
         instrumentation_key=None,
         enable_logger=True,
         send_basics=True,

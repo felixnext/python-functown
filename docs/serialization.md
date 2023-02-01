@@ -55,6 +55,11 @@ These decorators require an extra package to pull in protobuf dependencies:
 pip install functown[protobuf]
 ```
 
+> **Warning:** There might be a collisions with `azure-functions` depndencies on
+> the `protobuf` package (see [issue](https://stackoverflow.com/questions/71759248/importerror-cannot-import-name-builder-from-google-protobuf-internal)).
+> To fix this make sure to set `PYTHON_ISOLATE_WORKER_DEPENDENCIES` to `1` in your
+> config.
+
 ### Protobuf Serialization
 
 The serialization part takes the output from your function and packages it into a

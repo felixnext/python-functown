@@ -28,7 +28,7 @@ try:
         InsightsMetrics,
         InsightsEvents,
         InsightsTracer,
-        insights,
+        insights as Insights,  # avoid name clash with insights package
     )
 except Exception as ex:
     logging.warning("Unable to load metrics, please install `functown[insights]`")
