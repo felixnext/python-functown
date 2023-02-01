@@ -219,7 +219,10 @@ run_test_case "Json" '{"foo": "bar"}' "POST" "" "$hdl" "true" "" "foo:bar|proces
 echo_header "Protobuf Serialization"
 hdl="TestProtobufSerialization"
 
-# TODO: complete
+msg='\nM\n\x0bHello World\x10\x01\x1d\x00\x00\x00?"\x11\n\rHello World 0\x10\x00"\x11\n\rHello World 1\x10\x00"\x11\n\rHello World 2\x10\x00'
+
+# FEAT: find a way to check deserialization
+# run_test_case "Protobuf" "$msg" "POST" "" "$hdl" "true" "" "foo:bar|processed:true"
 
 # --- Statistics ---
 # print pretty statistics about failed and successful tests
