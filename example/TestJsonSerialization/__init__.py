@@ -25,4 +25,5 @@ DEBUG = ft.utils.get_flag("FUNC_DEBUG", False)
 def main(req: HttpRequest, body: dict, logger: Logger, **kwargs) -> dict:
     logger.info(f"Received request: {body}")
     body["processed"] = True
+    body["completed"] = True
     return body

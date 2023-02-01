@@ -1,0 +1,32 @@
+// Before usage this has to be compiled to python
+// protoc --python_out=. ./tests/serialization/resources/example.proto
+
+syntax = "proto3";
+
+package functown.example;
+
+message Information {
+  optional string msg = 1;
+  optional int32 id = 2;
+  optional float score = 3;
+
+  enum Importance {
+    HIGH = 0;
+    MEDIUM = 1;
+    LOW = 2;
+  }
+
+  message SubInfo {
+    optional string msg = 1;
+    optional Importance type = 2;
+  }
+
+  repeated SubInfo data = 4;
+}
+
+message InformationList { repeated Information infos = 1; }
+
+message OtherData {
+  int32 uid = 1;
+  optional string data_field = 2;
+}
