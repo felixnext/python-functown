@@ -16,6 +16,17 @@ class AuthHandler(BaseDecorator):
     """Decorator to automatically parse a JWT Token from the HttpRequest parameters.
 
     This will add an `token` parameter of type `Token` to the inner function signature.
+
+    Args:
+        scopes (list): List of scopes that are required for the token
+        issuer_url (str): URL of the issuer of the token
+        audience (str): Audience of the token
+        verify (bool): Whether to verify the token signature against the issuer.
+            Defaults to `True`.
+        auto_disable_verify (bool): Whether to automatically disable token verification
+            if no issuer_url is provided. Defaults to `True`.
+        debug (bool): Whether to provide addditional info in error messages for
+            debugging. Defaults to `False`.
     """
 
     def __init__(
@@ -25,6 +36,7 @@ class AuthHandler(BaseDecorator):
         audience: Optional[str] = None,
         verify: bool = True,
         auto_disable_verify: bool = True,
+        debug: bool = False,
         **kwargs
     ):
         super().__init__(None, added_kw=["token"], **kwargs)

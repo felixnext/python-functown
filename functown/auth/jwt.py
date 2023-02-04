@@ -196,6 +196,7 @@ def verify_user(
     issuer_url: str = None,
     audience: str = None,
     verify: bool = False,
+    debug: bool = False,
 ) -> Token:
     """Verifies the user send in the request
 
@@ -225,7 +226,14 @@ def verify_user(
         # iterate scopes
         for scp in scopes:
             if scp not in token.scopes:
-                raise TokenError("Missing authorization scope for current access", 401)
+                if debug is True:
+                    raise TokenError(
+                        f"Missing scope {scp} in current token: {token.scopes}", 401
+                    )
+                else:
+                    raise TokenError(
+                        "Missing authorization scope for current access", 401
+                    )
 
     # provide data
     return token
