@@ -107,7 +107,7 @@ def decode_token(
     local_mode = host and host.split(":")[0].lower() == "localhost"
 
     # check if token should be verified
-    if verify:
+    if verify is True:
         # check if issuer url is provided
         if issuer_url is None:
             raise ValueError("Issuer URL is required for verification")
