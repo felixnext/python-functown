@@ -9,6 +9,7 @@ from typing import List, Optional
 from azure.functions import HttpRequest
 
 from functown.utils import BaseDecorator
+from functown.errors import TokenError
 from .jwt import verify_user
 
 
@@ -37,7 +38,7 @@ class AuthHandler(BaseDecorator):
         verify: bool = True,
         auto_disable_verify: bool = True,
         debug: bool = False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(None, added_kw=["token"], **kwargs)
 
@@ -54,19 +55,30 @@ class AuthHandler(BaseDecorator):
             else:
                 raise ValueError("No issuer_url provided, but verify is True.")
         self.verify = verify
+        self.debug = debug
 
     def run(self, func, *args, **kwargs):
         # retrieve request
         req: HttpRequest = self._get("req", 0, *args, **kwargs)
 
         # parse token
-        token = verify_user(
-            req,
-            scopes=self.scopes,
-            issuer_url=self.issuer_url,
-            audience=self.audience,
-            verify=self.verify,
-        )
+        try:
+            token = verify_user(
+                req,
+                scopes=self.scopes,
+                issuer_url=self.issuer_url,
+                audience=self.audience,
+                verify=self.verify,
+            )
+        except TokenError as ex:
+            if self.debug:
+                raise ex
+            raise TokenError("Token validation failed", 401)
+        except Exception as ex:
+            msg = "Internal error during verification"
+            if self.debug:
+                msg += f": {ex}"
+            raise TokenError(msg, 500)
 
         kwargs["token"] = token
 
