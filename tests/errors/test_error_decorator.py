@@ -222,7 +222,7 @@ def test_error_decorator_response(caplog, exc, method, body, return_errors):
         assert caplog.records[pos + 2].message == "Trace:"
         num = 174 if exc == TokenError else 183
         if sys.version_info.minor <= 7:
-            num = 169 if exc == TokenError else 178
+            num = 179 if exc == TokenError else 188
         assert caplog.records[pos + 3].message == (
             f"- error_decorator.py:128:{num}"
             " - Vars: ('self', 'func', 'args', 'kwargs', 'logs', 'logger', 'ex')"
