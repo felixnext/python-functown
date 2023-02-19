@@ -53,7 +53,13 @@ class ErrorHandler(BaseDecorator):
         general_error_msg: str = "This function executed unsuccessfully.",
         **kwargs,
     ):
-        super().__init__(None, added_kw=["logs", "logger"], **kwargs)
+        kws = []
+        if enable_logger:
+            kws.append("logger")
+            # note that logs are only enabled when logger is also enabled
+            if return_logs:
+                kws.append("logs")
+        super().__init__(None, added_kw=kws, **kwargs)
 
         # set error handling
         self.debug = debug
@@ -146,6 +152,10 @@ class ErrorHandler(BaseDecorator):
                 logging.error(f"Failed to get logger: {ex}")
                 raise ex
         else:
+            if self.return_logs is True:
+                logging.warning(
+                    "ErrorHandler: Cannot return logs if logger is not enabled"
+                )
             logger = logging
 
         # check if outermost

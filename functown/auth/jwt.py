@@ -10,7 +10,7 @@ import base64
 from dataclasses import dataclass
 import logging
 from time import time
-from typing import Dict, Any, Union, Set, List
+from typing import Dict, Any, Union, Set, List, Optional
 
 import requests
 from jose import jwt
@@ -38,7 +38,7 @@ class Token:
     user_id: str
     scopes: Set[str]
     verified: bool = False
-    claims: Dict[str, Any] = None
+    claims: Optional[Dict[str, Any]] = None
     _local: bool = False
 
     @property
@@ -61,7 +61,11 @@ def _decode_value(val):
 
 
 def decode_token(
-    headers, issuer_url: str = None, audience: str = None, verify=True
+    headers,
+    issuer_url: Optional[str] = None,
+    audience: Optional[str] = None,
+    verify: bool = True,
+    logger: Optional[logging.Logger] = None,
 ) -> Token:
     """Verifies the request headers and returns a list of claims.
 
@@ -91,6 +95,9 @@ def decode_token(
         ValueError: If the issuer url is not provided
         IOError: If the issuer data could not be retrieved
     """
+    # retrieve logger
+    logger = logger or logging
+
     # get token
     hdict = dict(headers)
     token = hdict.get("authorization", None)
@@ -112,7 +119,7 @@ def decode_token(
         if issuer_url is None:
             raise ValueError("Issuer URL is required for verification")
         if audience is None:
-            logging.warning("Audience is not provided for verification")
+            logger.warning("Audience is not provided for verification")
 
         # parse headers from the JWT token
         header_data = jwt.get_unverified_header(token)
@@ -157,7 +164,7 @@ def decode_token(
             issuer=issuer["issuer"],
         )
     else:
-        logging.warning("JWT token is not verified!")
+        logger.warning("JWT token is not verified!")
         claims = jwt.get_unverified_claims(token)
 
     # verify the claims
@@ -172,12 +179,12 @@ def decode_token(
         ):
             raise TokenError("Provided user information does not match")
     else:
-        logging.info("Executing local mode (avoid user check)")
+        logger.info("Executing local mode (avoid user check)")
 
     # verify if token is expired
     cur_time = time()
     if claims["exp"] < cur_time:
-        logging.error(
+        logger.error(
             f"Current time is {cur_time} but token is expired at {claims['exp']} "
             f"(diff: {claims['exp'] - cur_time})"
         )
@@ -192,11 +199,12 @@ def decode_token(
 
 def verify_user(
     req,
-    scopes: List[str] = None,
-    issuer_url: str = None,
-    audience: str = None,
+    scopes: Optional[List[str]] = None,
+    issuer_url: Optional[str] = None,
+    audience: Optional[str] = None,
     verify: bool = False,
     debug: bool = False,
+    logger: Optional[logging.Logger] = None,
 ) -> Token:
     """Verifies the user send in the request
 
@@ -211,11 +219,17 @@ def verify_user(
         scopes: Scopes from the token
         local: If the request was send from localhost
     """
+    logger = logger or logging
     # verify the token
     try:
-        token = decode_token(req.headers, issuer_url, audience, verify=verify)
+        token = decode_token(
+            req.headers, issuer_url, audience, verify=verify, logger=logger
+        )
     except TokenError as ex:
-        raise TokenError(ex.msg, 500)
+        raise TokenError(ex.msg, 401)
+    except Exception as ex:
+        logger.error(ex)
+        raise TokenError("Unable to parse token", 500)
 
     # verify scopes
     if scopes:
