@@ -61,6 +61,9 @@ class AuthHandler(BaseDecorator):
         # retrieve request
         req: HttpRequest = self._get("req", 0, *args, **kwargs)
 
+        # get logger
+        logger = self._get("logger", None, *args, **kwargs) or logging
+
         # parse token
         try:
             token = verify_user(
@@ -69,6 +72,7 @@ class AuthHandler(BaseDecorator):
                 issuer_url=self.issuer_url,
                 audience=self.audience,
                 verify=self.verify,
+                logger=logger,
             )
         except TokenError as ex:
             if self.debug:
