@@ -65,6 +65,7 @@ def decode_token(
     issuer_url: Optional[str] = None,
     audience: Optional[str] = None,
     verify: bool = True,
+    debug: bool = False,
     logger: Optional[logging.Logger] = None,
 ) -> Token:
     """Verifies the request headers and returns a list of claims.
@@ -143,7 +144,15 @@ def decode_token(
                 sig = key
                 break
         if not sig:
-            raise TokenError("Token signature does not match")
+            msg = "Token signature does not match"
+            if debug:
+                key_ls = [f"'{key['kid']}'" for key in keys["keys"]]
+                msg = (
+                    f"Token signature does not match. "
+                    f"Expected: '{header_data['kid']}', "
+                    f"Got: {key_ls}"
+                )
+            raise TokenError(msg)
 
         # retrieve pub key
         pk = (
@@ -223,7 +232,7 @@ def verify_user(
     # verify the token
     try:
         token = decode_token(
-            req.headers, issuer_url, audience, verify=verify, logger=logger
+            req.headers, issuer_url, audience, verify=verify, debug=debug, logger=logger
         )
     except TokenError as ex:
         raise TokenError(ex.msg, 401)
