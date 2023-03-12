@@ -72,6 +72,7 @@ class AuthHandler(BaseDecorator):
                 issuer_url=self.issuer_url,
                 audience=self.audience,
                 verify=self.verify,
+                debug=self.debug,
                 logger=logger,
             )
         except TokenError as ex:
