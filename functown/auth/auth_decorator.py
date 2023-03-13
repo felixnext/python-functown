@@ -4,7 +4,7 @@ Copyright (c) 2023, Felix Geilert
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from azure.functions import HttpRequest
 
@@ -38,6 +38,7 @@ class AuthHandler(BaseDecorator):
         verify: bool = True,
         auto_disable_verify: bool = True,
         debug: bool = False,
+        auth_header: Union[str, List[str]] = "authorization",
         **kwargs,
     ):
         super().__init__(None, added_kw=["token"], **kwargs)
@@ -56,6 +57,7 @@ class AuthHandler(BaseDecorator):
                 raise ValueError("No issuer_url provided, but verify is True.")
         self.verify = verify
         self.debug = debug
+        self._headers = auth_header
 
     def run(self, func, *args, **kwargs):
         # retrieve request
@@ -73,6 +75,7 @@ class AuthHandler(BaseDecorator):
                 audience=self.audience,
                 verify=self.verify,
                 debug=self.debug,
+                auth_header=self._headers,
                 logger=logger,
             )
         except TokenError as ex:

@@ -20,6 +20,7 @@ class HeaderEnum(str, Enum):
     """List of Headers to be used in typed way"""
 
     AUTHORIZATION = "Authorization"
+    X_AUTHORIZATION = "X-Authorization"  # for mitigating AzFct bug
     CONTENT_TYPE = "Content-Type"
     ACCEPT = "Accept"
     HOST = "Host"

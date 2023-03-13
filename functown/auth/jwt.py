@@ -66,6 +66,7 @@ def decode_token(
     audience: Optional[str] = None,
     verify: bool = True,
     debug: bool = False,
+    auth_header: Union[str, List[str]] = "authorization",
     logger: Optional[logging.Logger] = None,
 ) -> Token:
     """Verifies the request headers and returns a list of claims.
@@ -76,6 +77,11 @@ def decode_token(
     - `scp`: The access scopes of the user
     - `exp`: The expiration time of the token
 
+    The `auth_header` parameter is required for scenarios where the token is not set to
+    default authorization header. This can for example be the case when Azure is
+    overwritting the header, see: https://github.com/Azure/static-web-apps/issues/34
+    It is recommended to use `x-authorization` in these cases instead!
+
     Args:
         headers: req.header information to retrieve the token
         issuer_url (str): The issuer url to retrieve the public key. Only required if
@@ -84,6 +90,10 @@ def decode_token(
             `verify` is set to `True`.
         verify (bool): Whether to verify the token signature against the issuer.
             Defaults to `True`.
+        debug (bool): Whether to provide addditional info in error messages for
+            debugging. Defaults to `False`.
+        auth_header (str): The header key to retrieve the token from. Defaults to
+            `authorization`. If provided a list will check the first populated value.
 
     Returns:
         name (str): Passed username in the token
@@ -98,17 +108,25 @@ def decode_token(
     """
     # retrieve logger
     logger = logger or logging
+    if not isinstance(auth_header, list):
+        auth_header = [auth_header]
 
     # get token
     hdict = dict(headers)
-    token = hdict.get("authorization", None)
+    token = None
+    for header in auth_header:
+        if header in hdict:
+            token = hdict[header]
+            break
     min_len = len(BEARER)
 
     # validate if the token exists
     if token and len(token) > min_len:
         token = token[min_len:]
     else:
-        raise TokenError("JWT Token could not be parsed")
+        raise TokenError(
+            f"JWT Token could not be parsed from headers {auth_header}", 401
+        )
 
     # check if in localmode (for azure functions)
     host = hdict.get("host", None)
@@ -152,7 +170,7 @@ def decode_token(
                     f"Expected: '{header_data['kid']}', "
                     f"Got: {key_ls}"
                 )
-            raise TokenError(msg)
+            raise TokenError(msg, 401)
 
         # retrieve pub key
         pk = (
@@ -186,7 +204,7 @@ def decode_token(
         if (user_id and user_id != claims["oid"]) or (
             user_name and user_name != claims.get("name", user_name)
         ):
-            raise TokenError("Provided user information does not match")
+            raise TokenError("Provided user information does not match", 401)
     else:
         logger.info("Executing local mode (avoid user check)")
 
@@ -197,7 +215,7 @@ def decode_token(
             f"Current time is {cur_time} but token is expired at {claims['exp']} "
             f"(diff: {claims['exp'] - cur_time})"
         )
-        raise TokenError("Token is expired")
+        raise TokenError("Token is expired", 401)
 
     # further parse the claims
     scopes = set(claims["scp"].split(" "))
@@ -213,6 +231,7 @@ def verify_user(
     audience: Optional[str] = None,
     verify: bool = False,
     debug: bool = False,
+    auth_header: Union[str, List[str]] = "authorization",
     logger: Optional[logging.Logger] = None,
 ) -> Token:
     """Verifies the user send in the request
@@ -232,7 +251,13 @@ def verify_user(
     # verify the token
     try:
         token = decode_token(
-            req.headers, issuer_url, audience, verify=verify, debug=debug, logger=logger
+            req.headers,
+            issuer_url,
+            audience,
+            verify=verify,
+            debug=debug,
+            auth_header=auth_header,
+            logger=logger,
         )
     except TokenError as ex:
         raise TokenError(ex.msg, 401)
