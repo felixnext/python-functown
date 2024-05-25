@@ -50,7 +50,7 @@ class HybridProtoResponse(SerializationDecorator):
         self,
         func=None,
         pb_class: tp.Any = None,
-        headers: tp.Optional[dict[str, str]] = None,
+        headers: tp.Optional[tp.Dict[str, str]] = None,
         status_code: int = 200,
         allow_json: tp.Optional[bool] = None,
         json_all_fields: bool = True,
@@ -65,7 +65,7 @@ class HybridProtoResponse(SerializationDecorator):
 
     def serialize(
         self, req: HttpRequest, res: tp.Any, *args, **kwargs
-    ) -> tuple[tp.Union[bytes, str], str]:
+    ) -> tp.Tuple[tp.Union[bytes, str], str]:
         # check for request header
         mime_raw = RequestArgHandler(req).get_header(
             HeaderEnum.CONTENT_TYPE, required=False
