@@ -12,6 +12,7 @@ except ImportError:
 
 try:
     from .protobuf import ProtobufResponse, ProtobufRequest
+    from .hybrid import HybridProtoResponse
 except ImportError:
     logging.warning("Unable to load protobuf, please install `functown[protobuf]`")
 

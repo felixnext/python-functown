@@ -9,12 +9,11 @@ No code outside this file should need to touch the opencensus API directly.
 Copyright (c) 2023, Felix Geilert
 """
 
-
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 import logging
-from typing import Dict, Union, Type, List, Any, Callable
+from typing import Dict, Union, Type, List, Any, Callable, Optional
 
 from opencensus.ext.azure import metrics_exporter
 from opencensus.stats.measurement_map import MeasurementMap
@@ -79,7 +78,7 @@ class MetricSpec:
     columns: List[str]
     mtype: MetricType
     dtype: Type[Union[int, float]] = int
-    namespace: str = None
+    namespace: Optional[str] = None
     start_value: Union[int, float, None] = None
 
     @property
@@ -131,7 +130,7 @@ class Metric:
         vm: stats_module.ViewManager,
         map: MeasurementMap,
         add_name_column: bool = True,
-        handler_columns: Dict[str, Any] = None,
+        handler_columns: Optional[Dict[str, Any]] = None,
     ):
         # store the spec
         self.spec = spec
@@ -190,8 +189,8 @@ class Metric:
         for key, value in cols.items():
             if key not in self.spec.columns:
                 logging.warning(
-                    f"Key {key} is not a valid column for metric {self.sepc.name}. "
-                    "Ignoring."
+                    f"Key {key} is not a valid column for metric "
+                    f"{self.spec.name}. Ignoring."
                 )
                 continue
             tag.insert(key, value)
@@ -379,7 +378,7 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
         self,
         specs: List[MetricSpec],
         mode: MetricUseMode = MetricUseMode.HARD_FAIL,
-        global_columns: Dict[str, Any] = None,
+        global_columns: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Creates a list of metrics based on the specifications.
 
@@ -433,7 +432,7 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
 
         return True
 
-    def record(self, values: Dict[str, Any], columns: Dict[str, Any] = None):
+    def record(self, values: Dict[str, Any], columns: Optional[Dict[str, Any]] = None):
         """Records the given values to the metrics.
 
         In this case the values for all metrics are recorded under the same tag-map
@@ -474,7 +473,7 @@ class MetricHandler(metaclass=ThreadSafeSingleton):
         self,
         instrumentation_key: str,
         callback: Callable[[metrics_exporter.Envelope], bool],
-        enable_standard_metrics: bool = None,
+        enable_standard_metrics: Optional[bool] = None,
         flush_sec: float = 15,
     ):
         """Connects the metrics to Azure Insights.

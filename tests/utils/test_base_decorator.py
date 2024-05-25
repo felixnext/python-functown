@@ -8,10 +8,13 @@ from collections import OrderedDict
 import logging
 from inspect import signature, Parameter
 from types import MappingProxyType
+import pytest
 
 from azure.functions import HttpRequest
 
 from functown.utils import BaseDecorator
+
+pytest_plugins = ("pytest_asyncio",)
 
 
 class SampleDecorator(BaseDecorator):
@@ -106,6 +109,7 @@ def test_base_decorator_signature():
     def test_function3(req: HttpRequest, *params, **kwargs):
         logging.info("Hello World")
 
+    # NOTE: for some reason this test is flaky - (sometimes including * and **)
     assert signature(test_function3).parameters == prox
 
     # --- VAR ARGS AND DEFAULT FUNCTION ---
@@ -138,3 +142,20 @@ def test_base_decorator_signature():
         logging.info("Hello World")
 
     assert signature(test_function5).parameters == prox
+
+
+@pytest.mark.asyncio
+async def test_base_async():
+    @BaseDecorator()
+    async def test_func1():
+        logging.info("Async Hello World")
+
+    assert signature(test_func1).parameters == {}
+
+    @BaseDecorator()
+    async def test_func2(req: HttpRequest):
+        logging.info("Hello World")
+        return 4
+
+    res = await test_func2(None)
+    assert res == 4

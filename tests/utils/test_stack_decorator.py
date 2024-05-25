@@ -4,6 +4,7 @@ Copyright (c) 2023, Felix Geilert
 """
 
 from inspect import signature
+import pytest
 
 from functown.utils import BaseDecorator, StackDecorator
 
@@ -43,5 +44,31 @@ def test_stack_decorator():
 
     # validate signature contains only my_param
     sig = signature(test_func)
+    assert len(sig.parameters) == 1
+    assert "my_param" in sig.parameters
+
+
+@pytest.mark.asyncio
+async def test_stack_decorator_async():
+    """Tests the StackDecorator"""
+    # create the decorator
+    dec = StackDecorator(
+        [
+            ArgDec("arg1"),
+            ArgDec("arg2"),
+        ]
+    )
+
+    # run the function
+    @dec
+    async def test_func_as(my_param: str, arg1: str, arg2: str):
+        return f"{my_param} {arg1} {arg2}"
+
+    # validate the result
+    result = await test_func_as("foo")
+    assert result == "foo dec: arg1 dec: arg2"
+
+    # validate signature contains only my_param
+    sig = signature(test_func_as)
     assert len(sig.parameters) == 1
     assert "my_param" in sig.parameters

@@ -27,3 +27,22 @@ def test_auth_decorator(token_request: HttpRequest):
 
     with pytest.raises(TokenError):
         test_func(token_request)
+
+
+@pytest.mark.asyncio
+async def test_auth_decorator_async(token_request: HttpRequest):
+    @AuthHandler(["test.bar"])
+    async def test_func(request: HttpRequest, token: Token, **kwargs):
+        # assert
+        assert type(token) == Token
+        assert token.user_id == "test"
+
+    await test_func(token_request)
+
+    # test failure case
+    @AuthHandler(["test.baz"])
+    async def test_func(request: HttpRequest, token: Token, **kwargs):
+        pass
+
+    with pytest.raises(TokenError):
+        await test_func(token_request)
