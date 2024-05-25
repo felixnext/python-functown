@@ -84,3 +84,27 @@ def test_hybridproto_response(json_data):
     body_item = pb2.InformationList()
     body_item.ParseFromString(res.get_body())
     assert body_item == item
+
+
+@pytest.mark.asyncio
+async def test_hybridproto_response_async(json_data):
+    """Tests protobuf response serialization."""
+    # generate
+    item = pb2.InformationList()
+    info = item.infos.add()
+    info.msg = "Hello World"
+    info.id = 1
+    info.score = 0.5
+    for i in range(3):
+        d = info.data.add()
+        d.msg = f"Hello World {i}"
+        d.type = pb2.Information.Importance.HIGH
+
+    @HybridProtoResponse
+    async def main(req: HttpRequest) -> pb2.InformationList:
+        return item
+
+    res = await main(req=HttpRequest("GET", "http://localhost", body=None))
+    assert isinstance(res, HttpResponse)
+    assert res.mimetype == "application/octet-stream"
+    assert res.get_body() == item.SerializeToString()

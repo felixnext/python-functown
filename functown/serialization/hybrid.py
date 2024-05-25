@@ -66,7 +66,6 @@ class HybridProtoResponse(SerializationDecorator):
     def serialize(
         self, req: HttpRequest, res: tp.Any, *args, **kwargs
     ) -> tuple[tp.Union[bytes, str], str]:
-        # FEAT: integrate async support [LIN:MED-568]
         # check for request header
         mime_raw = RequestArgHandler(req).get_header(
             HeaderEnum.CONTENT_TYPE, required=False
@@ -114,7 +113,7 @@ class HybridProtoResponse(SerializationDecorator):
 
         # execute correct response
         if use_json is True:
-            # DEBT: sub-objects are skipped instead of null values [LIN:MED-391]
+            # DEBT: sub-objects are skipped instead of null values
             # dict = json_format.MessageToDict(
             #     res,
             #     # NOTE: this is helpful for gql parsing

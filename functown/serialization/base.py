@@ -3,6 +3,7 @@
 Copyright (c) 2023, Felix Geilert
 """
 
+import asyncio
 from abc import abstractmethod
 from typing import Any, Dict, Tuple, Union, Optional
 
@@ -50,7 +51,30 @@ class SerializationDecorator(BaseDecorator):
         """
         raise NotImplementedError
 
+    async def __async_wrapper(self, func, *args, **kwargs):
+        # execute inner function
+        res = await func(*args, **kwargs)
+
+        # get request object
+        req = self._get("req", 0, *args, **kwargs)
+        if "req" in kwargs:
+            del kwargs["req"]
+        else:
+            args = args[1:]
+
+        # serialize result
+        data, mtype = self.serialize(req, res, *args, **kwargs)
+        if isinstance(mtype, ContentTypes):
+            mtype = mtype.value
+        return HttpResponse(
+            data, status_code=self._code, headers=self._headers, mimetype=mtype
+        )
+
     def run(self, func, *args, **kwargs):
+        # check if async
+        if asyncio.iscoroutinefunction(func):
+            return self.__async_wrapper(func, *args, **kwargs)
+
         # execute inner function
         res = func(*args, **kwargs)
 
