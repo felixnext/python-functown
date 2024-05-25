@@ -5,7 +5,6 @@ Used for stackable decorators to avoid boilerplate and clean at the out layer.
 Copyright (c) 2023, Felix Geilert
 """
 
-
 import logging
 from inspect import Parameter, Signature, signature
 import threading
@@ -14,6 +13,8 @@ from typing import Dict, Any, Union, List, Callable, Tuple
 
 # defines type used for ids
 IDTYPE = str
+
+# FIXME: allow to be async
 
 
 class BaseDecorator(object):

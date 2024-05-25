@@ -4,3 +4,4 @@ pytest-cov
 pytest-mock
 pytest-xdist
 pytest-forked
+pytest-asyncio

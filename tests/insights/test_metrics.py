@@ -3,7 +3,6 @@
 Copyright (c) 2023, Felix Geilert
 """
 
-
 import pytest
 import time
 
@@ -105,7 +104,7 @@ def test_metric_counter(name, cols, mtype, dtype, start, values, expected_data):
     )
 
     # create a metric
-    handler = MetricHandler()
+    handler = MetricHandler(add_name_column=True)
     handler.create_metrics([spec])
     metric = handler[name]
 

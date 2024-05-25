@@ -7,7 +7,7 @@ from glob import glob
 
 
 __status__ = "Package"
-__copyright__ = "Copyright 2023"
+__copyright__ = "Copyright 2024"
 __license__ = "MIT License"
 __author__ = "Felix Geilert"
 

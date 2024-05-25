@@ -4,7 +4,7 @@ Copyright (c) 2023, Felix Geilert
 """
 
 from abc import abstractmethod
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union, Optional
 
 from azure.functions import HttpResponse, HttpRequest
 
@@ -25,7 +25,7 @@ class SerializationDecorator(BaseDecorator):
     def __init__(
         self,
         func=None,
-        headers: Dict[str, str] = None,
+        headers: Optional[Dict[str, str]] = None,
         status_code: int = 200,
         **kwargs
     ):
