@@ -127,7 +127,13 @@ class ProtobufRequest(DeserializationDecorator):
             if isinstance(body, str):
                 body = body.encode("utf-8")
             pb_item = self._pb_class()
-            json_format.Parse(body, pb_item)
+            # NOTE: this provides more graceful error handling
+            try:
+                json_format.Parse(body, pb_item)
+            except json_format.ParseError as e:
+                raise RequestError(f"Failed to parse JSON request: {str(e)}", 400)
+            except Exception as e:
+                raise RequestError(f"Error while parsing json body", 400)
             return pb_item
 
         # check for hard request
