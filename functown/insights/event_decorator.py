@@ -27,7 +27,7 @@ Copyright (c) 2023, Felix Geilert
 """
 
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 from opencensus.ext.azure.log_exporter import (
     AzureEventHandler,
@@ -42,11 +42,26 @@ class InsightsEvents(InsightsDecorator):
 
     This will add the `events` object to the function call.
 
+    Example (with telemetry processor):
+    ```
+    def my_filter(envelop: Envelope) -> bool:
+        if debug_filter(envelop):
+            return False
+        if envelop.tags is None:
+            envelop.tags = {}
+        envelop.tags["key"] = "value"
+        return True
+
+    @InsightsEvents("my_instrumentation_key", callback=my_filter)
+    def my_function(events):
+        events.info("This is an event message")
+    ```
+
     Args:
         instrumentation_key (str): The instrumentation key for the Application Insights.
         callback (Callable[[Envelope], bool]): A callback function that is called for
             every telemetry item. It can act as a filter (by returning False) or modify
-            the telemetry item (by returning True end modifying the reference to envelop
+            the telemetry item (by returning True and modifying the reference to envelop
             passed).
         clean_logger (bool): Defines if existing `logger` object is overwritten.
             Defaults to False.
@@ -55,18 +70,20 @@ class InsightsEvents(InsightsDecorator):
     def __init__(
         self,
         instrumentation_key: str,
-        callback: Callable[[Envelope], bool] = None,
+        callback: Optional[Callable[[Envelope], bool]] = None,
         clean_logger: bool = False,
+        arg_name: str = "events",
         **kwargs,
     ):
-        super().__init__(instrumentation_key, added_kw=["events"], **kwargs)
+        super().__init__(instrumentation_key, added_kw=[arg_name], **kwargs)
 
+        self._arg = arg_name
         self.callback = callback
         self.clean_logger = clean_logger
 
     def run(self, func, *args, **kwargs):
         try:
-            events = self._create_logger(self.clean_logger, "events", *args, **kwargs)
+            events = self._create_logger(self.clean_logger, self._arg, *args, **kwargs)
 
             if self.instrumentation_key is not None:
                 event_handler = AzureEventHandler(
@@ -75,7 +92,7 @@ class InsightsEvents(InsightsDecorator):
                 if self.callback is not None:
                     event_handler.add_telemetry_processor(self.callback)
                 events.addHandler(event_handler)
-            kwargs["events"] = events
+            kwargs[self._arg] = events
         except Exception as ex:
             logging.error(f"Failed to create Insights Events Logger: {ex}")
             raise ex

@@ -18,7 +18,6 @@ https://opencensus.io/tracing/
 Copyright (c) 2023, Felix Geilert
 """
 
-
 import logging
 
 from opencensus.ext.azure.trace_exporter import AzureExporter
@@ -44,11 +43,13 @@ class InsightsTracer(InsightsDecorator):
         self,
         instrumentation_key: str,
         sampling_rate: float = 1.0,
+        arg_name: str = "tracer",
         **kwargs,
     ):
-        super().__init__(instrumentation_key, added_kw=["tracer"], **kwargs)
+        super().__init__(instrumentation_key, added_kw=[arg_name], **kwargs)
 
         self.sampling_rate = sampling_rate
+        self._arg = arg_name
 
     def run(self, func, *args, **kwargs):
         try:
@@ -64,7 +65,7 @@ class InsightsTracer(InsightsDecorator):
                 exporter=exporter,
                 sampler=ProbabilitySampler(self.sampling_rate),
             )
-            kwargs["tracer"] = tracer
+            kwargs[self._arg] = tracer
         except Exception as ex:
             logging.error(f"Failed to create Insights Tracer: {ex}")
             raise ex
