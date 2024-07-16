@@ -30,7 +30,7 @@ Copyright (c) 2023, Felix Geilert
 """
 
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 from opencensus.ext.azure.log_exporter import (
     AzureLogHandler,
@@ -65,12 +65,14 @@ class InsightsLogs(InsightsDecorator):
         self,
         instrumentation_key: str,
         send_basics: bool = True,
-        callback: Callable[[Envelope], bool] = None,
+        callback: Optional[Callable[[Envelope], bool]] = None,
         clean_logger: bool = False,
+        arg_name: str = "logger",
         **kwargs,
     ):
-        super().__init__(instrumentation_key, added_kw=["logger"], **kwargs)
+        super().__init__(instrumentation_key, added_kw=[arg_name], **kwargs)
 
+        self._arg = arg_name
         self.send_basics = send_basics
         self.callback = callback
         self.clean_logger = clean_logger
@@ -78,7 +80,7 @@ class InsightsLogs(InsightsDecorator):
     def run(self, func, *args, **kwargs):
         try:
             # check for logger
-            logger = self._create_logger(self.clean_logger, "logger", *args, **kwargs)
+            logger = self._create_logger(self.clean_logger, self._arg, *args, **kwargs)
 
             # create azure handler
             if self.instrumentation_key is not None:
@@ -88,7 +90,7 @@ class InsightsLogs(InsightsDecorator):
                 if self.callback is not None:
                     log_handler.add_telemetry_processor(self.callback)
                 logger.addHandler(log_handler)
-            kwargs["logger"] = logger
+            kwargs[self._arg] = logger
         except Exception as ex:
             logging.error(f"Failed to create insights logger: {ex}")
             raise ex

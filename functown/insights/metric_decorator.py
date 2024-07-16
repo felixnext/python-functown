@@ -27,9 +27,9 @@ Copyright (c) 2023, Felix Geilert
 """
 
 import logging
-from typing import List, Callable, Dict, Any
+from typing import List, Callable, Dict, Any, Optional
 
-from opencensus.ext.azure import metrics_exporter
+from opencensus.ext.azure import metrics_exporter  # type: ignore
 
 from .base import InsightsDecorator
 from .metrics import MetricHandler, MetricSpec, MetricUseMode
@@ -59,15 +59,16 @@ class InsightsMetrics(InsightsDecorator):
         self,
         instrumentation_key: str,
         metrics: List[MetricSpec],
-        callback: Callable[[metrics_exporter.Envelope], None] = None,
+        callback: Optional[Callable[[metrics_exporter.Envelope], None]] = None,
         enable_perf_metrics: bool = True,
         enable_name_column: bool = False,
-        global_columns: Dict[str, Any] = None,
+        global_columns: Optional[Dict[str, Any]] = None,
         mode: MetricUseMode = MetricUseMode.REUSE,
         flush_seconds: float = 15,
+        arg_name: str = "metrics",
         **kwargs,
     ):
-        super().__init__(instrumentation_key, added_kw=["metrics"], **kwargs)
+        super().__init__(instrumentation_key, added_kw=[arg_name], **kwargs)
 
         self.metric_specs = metrics
         self.callback = callback
@@ -77,6 +78,7 @@ class InsightsMetrics(InsightsDecorator):
         self.mode = mode
         self.flush_sec = flush_seconds
         self._handler = None
+        self._arg = arg_name
 
     def run(self, func, *args, **kwargs):
         try:
@@ -87,7 +89,7 @@ class InsightsMetrics(InsightsDecorator):
                 mode=self.mode,
                 global_columns=self.global_columns,
             )
-            kwargs["metrics"] = self._handler
+            kwargs[self._arg] = self._handler
 
             # register exporter for the metrics
             if self.instrumentation_key is not None:

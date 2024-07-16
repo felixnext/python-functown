@@ -56,7 +56,7 @@ class ErrorHandler(BaseDecorator):
         kws = []
         if enable_logger:
             kws.append("logger")
-            # note that logs are only enabled when logger is also enabled
+            # NOTE: logs are only enabled when logger is also enabled
             if return_logs:
                 kws.append("logs")
         super().__init__(None, added_kw=kws, **kwargs)
