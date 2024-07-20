@@ -3,6 +3,7 @@
 Copyright (c) 2023, Felix Geilert
 """
 
+import typing as tp
 from inspect import signature
 import pytest
 
@@ -72,3 +73,63 @@ async def test_stack_decorator_async():
     sig = signature(test_func_as)
     assert len(sig.parameters) == 1
     assert "my_param" in sig.parameters
+
+
+# --- Test Argument passing ---
+
+
+class DecAddArg(BaseDecorator):
+    def __init__(self, name: str, value: tp.Any, **kwargs):
+        super().__init__(None, [name], **kwargs)
+
+        self._name = name
+        self._value = value
+
+    def run(self, func, *args, **kwargs):
+        kwargs[self._name] = self._value
+        return func(*args, **kwargs)
+
+
+class DecTestArg(BaseDecorator):
+    def __init__(self, name: str, value: tp.Any, **kwargs):
+        super().__init__(None, [name], **kwargs)
+
+        self._name = name
+        self._value = value
+
+    def run(self, func, *args, **kwargs):
+        # validate
+        assert self._name in kwargs, f"Missing {self._name} in kwargs: {kwargs}"
+        assert (
+            kwargs[self._name] == self._value
+        ), f"Wrong value for {self._name}, got {kwargs[self._name]}"
+
+        return func(*args, **kwargs)
+
+
+def test_stack_decorator_args():
+    # test manually
+    @DecAddArg("arg1", "value1")
+    @DecAddArg("arg2", "value2")
+    @DecTestArg("arg1", "value1")
+    def test_func(my_param: str, arg1: str, arg2: str):
+        return f"{my_param} {arg1} {arg2}"
+
+    # validate the result
+    result = test_func("foo")
+    assert result == "foo value1 value2"
+
+    # test with stack
+    @StackDecorator(
+        [
+            DecAddArg("arg1", "value1"),
+            DecAddArg("arg2", "value2"),
+            DecTestArg("arg1", "value1"),
+        ]
+    )
+    def test_func_stack(my_param: str, arg1: str, arg2: str):
+        return f"{my_param} {arg1} {arg2}"
+
+    # validate the result
+    result = test_func_stack("foo")
+    assert result == "foo value1 value2"

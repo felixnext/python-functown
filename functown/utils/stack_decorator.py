@@ -3,7 +3,7 @@
 Copyright (c) 2023 Felix Geilert
 """
 
-from typing import List
+from typing import List, Optional
 
 from .base_decorator import BaseDecorator
 
@@ -22,7 +22,7 @@ class StackDecorator(BaseDecorator):
     def __init__(
         self,
         stack: List[BaseDecorator],
-        added_kw: List[str] = None,
+        added_kw: Optional[List[str]] = None,
         **kwargs,
     ):
         # set and expand
@@ -47,7 +47,7 @@ class StackDecorator(BaseDecorator):
         func = self.run_pre_hook(func, *args, **kwargs)
 
         # apply all decorators
-        for dec in self.__decs:
+        for dec in self.__decs[::-1]:
             func = dec(func)
 
         # execute post hook
