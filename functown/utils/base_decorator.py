@@ -12,7 +12,7 @@ from typing import Dict, Any, Union, List, Callable, Tuple
 
 
 # defines type used for ids
-IDTYPE = str
+IDTYPE = Union[str, None]
 
 # FIXME: allow to be async
 
@@ -47,7 +47,7 @@ class BaseDecorator(object):
     def __init__(
         self,
         func=None,
-        added_kw: List[str] = None,
+        added_kw: Union[List[str], None] = None,
         mask_signature: bool = True,
         **kwargs,
     ):
@@ -99,17 +99,24 @@ class BaseDecorator(object):
         cur_lvl, base_id = self.__class__.__decorator_count[self.__address]
 
         # validate if higher data
-        for lvl, addr in self.__class__.__decorator_count.values():
-            if addr == base_id and lvl > cur_lvl:
-                return False
-        return True
+        try:
+            # NOTE: copy the dict as in some cases the dict is modified during
+            # iteration
+            dec_copy = self.__class__.__decorator_count.copy()
+            for lvl, addr in dec_copy.values():
+                if addr == base_id and lvl > cur_lvl:
+                    return False
+            return True
+        except Exception as e:
+            logging.error(f"Error in is_first_decorator: {e}")
+            return None
 
     @property
     def is_last_decorator(self) -> bool:
         """Returns True if this is the last decorator in the stack (i.e. innermost)."""
         return self.level == 0
 
-    def _get(self, name: str, pos: int = None, *args, **kwargs) -> Union[Any, None]:
+    def _get(self, name: str, pos: Union[int, None] = None, *args, **kwargs) -> Union[Any, None]:
         """Retrieves an item either by name or by position."""
         if name in kwargs:
             return kwargs[name]
